@@ -11,104 +11,103 @@ export class VeiculoRanker {
      * @returns Lista de tuplas (veículo, score) ordenada pelo score
      */
     static rankearVeiculos(veiculos: Veiculo[]): Array<{ veiculo: Veiculo, score: number }> {
-        // Calcular valores mínimos e máximos para normalização
-        const minLucroBruto = Math.min(...veiculos.map(v => v.valorMercado - (v.lanceAtual || 0)));
-        const maxLucroBruto = Math.max(...veiculos.map(v => v.valorMercado - (v.lanceAtual || 0)));
-        const minValorizacao = Math.min(...veiculos.map(v => (v.lanceAtual || 0) > 0 ? ((v.valorMercado - (v.lanceAtual || 0)) / (v.lanceAtual || 0)) * 100 : 0));
-        const maxValorizacao = Math.max(...veiculos.map(v => (v.lanceAtual || 0) > 0 ? ((v.valorMercado - (v.lanceAtual || 0)) / (v.lanceAtual || 0)) * 100 : 0));
-        const minKm = Math.min(...veiculos.map(v => v.quilometragem || 0));
-        const maxKm = Math.max(...veiculos.map(v => v.quilometragem || 0));
-        const minAno = Math.min(...veiculos.map(v => {
-            const anoMatch = v.ano?.match(/\d{4}/);
-            return anoMatch ? parseInt(anoMatch[0]) : new Date().getFullYear();
-        }));
-        const maxAno = Math.max(...veiculos.map(v => {
-            const anoMatch = v.ano?.match(/\d{4}/);
-            return anoMatch ? parseInt(anoMatch[0]) : new Date().getFullYear();
-        }));
-
         return veiculos
             .map(veiculo => ({
                 veiculo,
-                score: this.calcularScore(veiculo, minLucroBruto, maxLucroBruto, minValorizacao, maxValorizacao, minKm, maxKm, minAno, maxAno)
+                score: this.calcularScore(veiculo)
             }))
             .sort((a, b) => b.score - a.score);
     }
 
     /**
-     * Calcula o score de um veículo com base em diversos fatores
+     * Calcula o score de um veículo com base em lucro bruto, percentual de lucro, quilometragem e marca
      * @param veiculo Veículo para calcular o score
-     * @param minLucroBruto Menor lucro bruto na lista
-     * @param maxLucroBruto Maior lucro bruto na lista
-     * @param minValorizacao Menor % de valorização na lista
-     * @param maxValorizacao Maior % de valorização na lista
-     * @param minKm Menor quilometragem na lista
-     * @param maxKm Maior quilometragem na lista
-     * @param minAno Menor ano na lista
-     * @param maxAno Maior ano na lista
-     * @returns Score calculado entre 0 e 10
+     * @returns Score calculado entre 0 e 10 com penalidades aplicadas
      */
-    static calcularScore(
-        veiculo: Veiculo,
-        minLucroBruto: number,
-        maxLucroBruto: number,
-        minValorizacao: number,
-        maxValorizacao: number,
-        minKm: number,
-        maxKm: number,
-        minAno: number,
-        maxAno: number
-    ): number {
+    static calcularScore(veiculo: Veiculo): number {
         // Extrair valores do veículo
         const maiorLance = veiculo.lanceAtual || 0;
         const valorMercado = veiculo.valorMercado || 0;
         const quilometragem = veiculo.quilometragem || 0;
-
-        // 1. Lucro Bruto (normalizado entre 0 e 1)
-        const lucroBruto = valorMercado - maiorLance;
-        const lucroBrutoNormalizado = maxLucroBruto === minLucroBruto ? 1 : (lucroBruto - minLucroBruto) / (maxLucroBruto - minLucroBruto);
-
-        // 2. % Valorização (normalizado entre 0 e 1)
-        const percentualValorizacao = maiorLance > 0 ? ((valorMercado - maiorLance) / maiorLance) * 100 : 0;
-        const valorizacaoNormalizada = maxValorizacao === minValorizacao ? 1 : (percentualValorizacao - minValorizacao) / (maxValorizacao - minValorizacao);
-
-        // 3. Quilometragem (normalizado entre 0 e 1, invertido: menor km = maior nota)
-        const kmNormalizada = maxKm === minKm ? 1 : 1 - ((quilometragem - minKm) / (maxKm - minKm));
-
-        // 4. Sinistro (0 se tiver sinistro, 1 se não tiver)
-        const penalizacaoSinistro = veiculo.sinistro ? 0 : 1;
-
-        // 5. Ano (normalizado entre 0 e 1)
-        let anoVeiculo = new Date().getFullYear();
-        if (veiculo.ano) {
-            const anoMatch = veiculo.ano.match(/\d{4}/);
-            if (anoMatch) anoVeiculo = parseInt(anoMatch[0]);
-        }
-        const anoNormalizado = maxAno === minAno ? 1 : (anoVeiculo - minAno) / (maxAno - minAno);
-
-        // 6. Marca (escala fixa entre 0 e 1)
         const marca = veiculo.marca?.toLowerCase() || '';
-        let classificacaoMarca = 0;
-        if (['honda', 'toyota'].includes(marca)) {
-            classificacaoMarca = 1; // Excelente
-        } else if (['nissan', 'mitsubishi'].includes(marca)) {
-            classificacaoMarca = 0.75; // Muito Bom
-        } else if (['chevrolet', 'chev', 'vw', 'volkswagen', 'fiat', 'renault', 'peugeot', 'hyundai', 'kia', 'jeep'].includes(marca)) {
-            classificacaoMarca = 0.5; // Bom
-        } else if (['bmw', 'land rover', 'mercedes'].includes(marca)) {
-            classificacaoMarca = 0.25; // Regular
+
+        // Calcular lucro bruto e percentual de lucro
+        const lucroBruto = valorMercado - maiorLance;
+        const percentualLucro = maiorLance > 0 ? (lucroBruto / maiorLance) * 100 : 0;
+
+        // 1. Score para Lucro Bruto
+        let scoreLucroBruto: number;
+        if (lucroBruto >= 10000) {
+            // Normaliza entre 10000 (0) e 30000 (1)
+            scoreLucroBruto = Math.min((lucroBruto - 10000) / (30000 - 10000), 1);
+        } else {
+            // Normaliza entre 5000 (0) e 10000 (0.5)
+            scoreLucroBruto = Math.max((lucroBruto - 5000) / (10000 - 5000), 0) * 0.5;
         }
 
-        // Cálculo final com pesos
-        const score =
-            (lucroBrutoNormalizado * 0.4) +    // 40%
-            (valorizacaoNormalizada * 0.2) +    // 20%
-            (kmNormalizada * 0.1) +             // 10%
-            (penalizacaoSinistro * 0.1) +       // 10%
-            (anoNormalizado * 0.1) +            // 10%
-            (classificacaoMarca * 0.1);         // 10%
+        // 2. Score para Percentual de Lucro (apenas se lucro bruto >= 10000)
+        let scorePercentualLucro = 0;
+        if (lucroBruto >= 10000) {
+            // Normaliza entre 30% (0) e 50% (1)
+            scorePercentualLucro = Math.min((percentualLucro - 30) / (50 - 30), 1);
+            scorePercentualLucro = Math.max(scorePercentualLucro, 0);
+        }
 
-        // Escala de 0 a 10
-        return parseFloat((score * 10).toFixed(1));
+        // 3. Score para Quilometragem
+        let scoreQuilometragem: number;
+        if (quilometragem <= 30000) {
+            scoreQuilometragem = 1;
+        } else if (quilometragem <= 210000) {
+            scoreQuilometragem = 1 - (quilometragem - 30000) / 180000;
+        } else {
+            scoreQuilometragem = 0;
+        }
+
+        // 4. Score para Marca
+        const classificacaoMarca = {
+            excelente: ['toyota', 'honda', 'hyundai'],
+            muitoBoas: ['jeep', 'volkswagen', 'vw', 'nissan', 'mitsubishi'],
+            boas: ['chevrolet', 'chev', 'fiat', 'renault', 'ford', 'kia'],
+            regular: ['citroen', 'peugeot', 'jac'],
+            ruim: ['bmw', 'mercedes', 'audi', 'land rover', 'volvo', 'subaru', 'mazda'],
+        };
+
+        let scoreMarca: number;
+        if (classificacaoMarca.excelente.includes(marca)) {
+            scoreMarca = 1;
+        } else if (classificacaoMarca.muitoBoas.includes(marca)) {
+            scoreMarca = 0.8;
+        } else if (classificacaoMarca.boas.includes(marca)) {
+            scoreMarca = 0.6;
+        } else if (classificacaoMarca.regular.includes(marca)) {
+            scoreMarca = 0.4;
+        } else if (classificacaoMarca.ruim.includes(marca)) {
+            scoreMarca = 0.2;
+        } else {
+            scoreMarca = 0; // Muito ruim
+        }
+
+        // Cálculo do score base com pesos
+        const scoreBase =
+            (scoreLucroBruto * 0.35) +  // 35% de peso
+            (scorePercentualLucro * 0.25) +  // 25% de peso
+            (scoreQuilometragem * 0.2) +  // 20% de peso
+            (scoreMarca * 0.2);  // 20% de peso
+
+        // Converter para escala de 0 a 10
+        let scoreFinal = scoreBase * 10;
+
+        // Aplicar penalidades extras
+        if (lucroBruto < 10000) {
+            scoreFinal = Math.max(scoreFinal - 2, 0); // Penalidade de -2
+        }
+        if (quilometragem > 210000) {
+            scoreFinal = Math.max(scoreFinal - 1, 0); // Penalidade de -1
+        }
+        if (quilometragem > 250000) {
+            scoreFinal = Math.max(scoreFinal - 1, 0); // Penalidade adicional de -1
+        }
+
+        return parseFloat(scoreFinal.toFixed(1)); // Retorna com 1 casa decimal
     }
 }
