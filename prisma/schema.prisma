@@ -1,0 +1,28 @@
+// prisma/schema.prisma
+// Este é o schema do banco de dados usando Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Modelo Veiculo que corresponde à interface TypeScript
+model Veiculo {
+  id            String   @id @default(uuid())
+  descricao     String
+  marca         String
+  ano           String
+  quilometragem Int
+  sinistro      Boolean
+  lanceInicial  Float
+  lanceAtual    Float
+  valorMercado  Float
+  dataCaptura   DateTime
+  urlOrigem     String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
