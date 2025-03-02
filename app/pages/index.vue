@@ -1,135 +1,138 @@
 <!-- pages/index.vue -->
 <template>
   <div class="container mx-auto px-4 py-8">
-    <header class="mb-8">
-      <h1 class="text-3xl font-bold text-gray-800">Leilão de Carros</h1>
-      <p class="text-gray-600">Encontre as melhores oportunidades em leilões de veículos</p>
-    </header>
+<!--    <header class="mb-8">-->
+<!--      <h1 class="text-3xl font-bold text-gray-800">Leilão de Carros</h1>-->
+<!--      <p class="text-gray-600">Encontre as melhores oportunidades em leilões de veículos</p>-->
+<!--    </header>-->
 
-    <div class="flex flex-col md:flex-row relative">
-      <!-- Botão para alternar o painel de filtros -->
-      <div
-          @click="filtrosColapsados = !filtrosColapsados"
-          class="absolute left-0 top-0 bg-white p-2 rounded-r-lg shadow cursor-pointer z-10"
-          :class="{'left-72': !filtrosColapsados, 'left-0': filtrosColapsados}"
-      >
-        <Icon
-            :name="filtrosColapsados ? 'mdi:chevron-right' : 'mdi:chevron-left'"
-            class="text-lg text-gray-500"
-        />
-      </div>
+    <div class="flex flex-col md:flex-row min-h-[calc(100vh-12rem)]">
+      <!-- Container do painel de filtros e botão -->
+      <div class="relative flex-shrink-0">
+        <!-- Botão para alternar o painel de filtros -->
+        <div
+            @click="filtrosColapsados = !filtrosColapsados"
+            class="absolute top-0 bg-white p-2 rounded-r-lg shadow cursor-pointer z-10 transition-all duration-300"
+            :class="{'left-[18rem]': !filtrosColapsados, 'left-0': filtrosColapsados}"
+        >
+          <Icon
+              :name="filtrosColapsados ? 'mdi:chevron-right' : 'mdi:chevron-left'"
+              class="text-lg text-gray-500"
+          />
+        </div>
 
-      <!-- Painel de filtros colapsável -->
-      <div
-          class="fixed md:relative inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out bg-white shadow-lg overflow-y-auto"
-          :class="{'translate-x-0': !filtrosColapsados, '-translate-x-full': filtrosColapsados}"
-          style="width: 18rem; max-width: 100%;"
-      >
-        <div class="p-4">
-          <h2 class="text-xl font-semibold mb-4">Filtros</h2>
+        <!-- Painel de filtros colapsável -->
+        <div
+            class="fixed md:relative inset-y-0 left-0 z-30 bg-white shadow-lg overflow-y-auto transition-all duration-300 ease-in-out"
+            :class="{
+            'w-72': !filtrosColapsados,
+            'w-0': filtrosColapsados,
+            'overflow-hidden': filtrosColapsados
+          }"
+        >
+          <div class="p-4">
+            <h2 class="text-xl font-semibold mb-4">Filtros</h2>
 
-          <!-- Filtro de descrição -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Descrição ou Marca</label>
-            <input
-                v-model="filtros.termoPesquisa"
-                type="text"
-                placeholder="Pesquisar..."
-                class="w-full p-2 border rounded focus:ring focus:ring-blue-200"
-            />
-          </div>
-
-          <!-- Filtro de ano -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Ano</label>
-            <div class="flex gap-2">
+            <!-- Filtro de descrição -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Descrição ou Marca</label>
               <input
-                  v-model.number="filtros.anoMin"
-                  type="number"
-                  placeholder="Min"
-                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-              />
-              <input
-                  v-model.number="filtros.anoMax"
-                  type="number"
-                  placeholder="Max"
-                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+                  v-model="filtros.termoPesquisa"
+                  type="text"
+                  placeholder="Pesquisar..."
+                  class="w-full p-2 border rounded focus:ring focus:ring-blue-200"
               />
             </div>
-          </div>
 
-          <!-- Filtro de preço -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Lance Atual (R$)</label>
-            <div class="flex gap-2">
-              <input
-                  v-model.number="filtros.precoMin"
-                  type="number"
-                  placeholder="Min"
-                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-              />
-              <input
-                  v-model.number="filtros.precoMax"
-                  type="number"
-                  placeholder="Max"
-                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-              />
+            <!-- Filtro de ano -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Ano</label>
+              <div class="flex gap-2">
+                <input
+                    v-model.number="filtros.anoMin"
+                    type="number"
+                    placeholder="Min"
+                    class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+                />
+                <input
+                    v-model.number="filtros.anoMax"
+                    type="number"
+                    placeholder="Max"
+                    class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+                />
+              </div>
             </div>
-          </div>
 
-          <!-- Filtro de quilometragem -->
-          <div class="mb-4">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Quilometragem</label>
-            <div class="flex gap-2">
-              <input
-                  v-model.number="filtros.kmMin"
-                  type="number"
-                  placeholder="Min"
-                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-              />
-              <input
-                  v-model.number="filtros.kmMax"
-                  type="number"
-                  placeholder="Max"
-                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-              />
+            <!-- Filtro de preço -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Lance Atual (R$)</label>
+              <div class="flex gap-2">
+                <input
+                    v-model.number="filtros.precoMin"
+                    type="number"
+                    placeholder="Min"
+                    class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+                />
+                <input
+                    v-model.number="filtros.precoMax"
+                    type="number"
+                    placeholder="Max"
+                    class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+                />
+              </div>
             </div>
+
+            <!-- Filtro de quilometragem -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Quilometragem</label>
+              <div class="flex gap-2">
+                <input
+                    v-model.number="filtros.kmMin"
+                    type="number"
+                    placeholder="Min"
+                    class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+                />
+                <input
+                    v-model.number="filtros.kmMax"
+                    type="number"
+                    placeholder="Max"
+                    class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+                />
+              </div>
+            </div>
+
+            <!-- Filtro de sinistro -->
+            <div class="mb-4">
+              <label class="flex items-center text-sm font-medium text-gray-700">
+                <input v-model="filtros.semSinistro" type="checkbox" class="mr-2 rounded" />
+                Sem sinistro
+              </label>
+            </div>
+
+            <!-- Botão de aplicar filtros -->
+            <button
+                @click="aplicarFiltros"
+                class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
+            >
+              Aplicar Filtros
+            </button>
+
+            <!-- Botão de resetar filtros -->
+            <button
+                @click="resetarFiltros"
+                class="w-full mt-2 bg-gray-200 text-gray-700 py-2 px-4 rounded hover:bg-gray-300 transition"
+            >
+              Limpar Filtros
+            </button>
           </div>
-
-          <!-- Filtro de sinistro -->
-          <div class="mb-4">
-            <label class="flex items-center text-sm font-medium text-gray-700">
-              <input v-model="filtros.semSinistro" type="checkbox" class="mr-2 rounded" />
-              Sem sinistro
-            </label>
-          </div>
-
-          <!-- Botão de aplicar filtros -->
-          <button
-              @click="aplicarFiltros"
-              class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
-          >
-            Aplicar Filtros
-          </button>
-
-          <!-- Botão de resetar filtros -->
-          <button
-              @click="resetarFiltros"
-              class="w-full mt-2 bg-gray-200 text-gray-700 py-2 px-4 rounded hover:bg-gray-300 transition"
-          >
-            Limpar Filtros
-          </button>
         </div>
       </div>
 
       <!-- Conteúdo principal -->
-      <div
-          class="w-full transition-all duration-300"
-          :class="{'md:ml-4': !filtrosColapsados}"
-      >
+      <div class="flex-1 w-full transition-all duration-300">
         <!-- Status e controles de visualização -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
-          <p class="text-gray-600">Exibindo {{ veiculosFiltrados.length }} veículos</p>
+          <div class="text-gray-600 ml-16">Exibindo {{ veiculosFiltrados.length }} veículos</div>
 
           <div class="flex items-center space-x-4">
             <!-- Toggle de visualização -->
@@ -230,7 +233,6 @@
                   />
                 </div>
               </th>
-
             </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -269,7 +271,6 @@
                     {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
                   </span>
               </td>
-
             </tr>
             </tbody>
           </table>
