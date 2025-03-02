@@ -1,11 +1,18 @@
 <!-- components/VeiculoCard.vue -->
 <template>
-  <div class="bg-white rounded-lg shadow-md overflow-hidden">
+  <div class="bg-white rounded-lg overflow-hidden">
     <div class="p-4 border-b">
       <div class="flex justify-between items-center">
-        <nuxt-link :to="`/veiculo/${veiculo.id}`" class="hover:text-blue-600">
-          <h3 class="text-lg font-semibold text-gray-800">{{ veiculo.descricao }}</h3>
-        </nuxt-link>
+        <a
+            :href="veiculo.urlOrigem"
+            target="_blank"
+            class="hover:text-blue-600"
+        >
+          <h3 class="text-lg font-semibold text-gray-800">
+            <span v-if="veiculo.sinistro" class="mr-1 text-red-500" title="Veículo com sinistro">🚨</span>
+            {{ veiculo.descricao }}
+          </h3>
+        </a>
         <span
             class="px-2 py-1 text-xs font-medium rounded-full"
             :class="getScoreClass(score)"
@@ -55,20 +62,22 @@
           Capturado em {{ new Date(veiculo.dataCaptura).toLocaleString('pt-BR') }}
         </div>
         <div class="flex space-x-2">
-          <nuxt-link
-              :to="`/veiculo/${veiculo.id}`"
-              class="text-sm text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Ver detalhes
-          </nuxt-link>
           <a
               v-if="veiculo.urlOrigem"
               :href="veiculo.urlOrigem"
               target="_blank"
-              class="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-colors"
+              title="Ver no site original"
           >
-            Ver no site original
+            <Icon name="mdi:open-in-new" class="text-lg" />
           </a>
+          <button
+              @click="$emit('excluir', veiculo.id)"
+              class="p-1.5 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full transition-colors"
+              title="Excluir veículo"
+          >
+            <Icon name="mdi:delete" class="text-lg" />
+          </button>
         </div>
       </div>
     </div>
@@ -84,6 +93,8 @@ import { VeiculoRanker } from '~/services/veiculoRankerService';
 const props = defineProps<{
   veiculo: Veiculo;
 }>();
+
+const emit = defineEmits(['excluir']);
 
 // Calcular o score dinamicamente
 const score = computed(() => {

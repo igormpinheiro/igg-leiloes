@@ -6,112 +6,149 @@
       <p class="text-gray-600">Encontre as melhores oportunidades em leilões de veículos</p>
     </header>
 
-    <div class="flex flex-col md:flex-row gap-6">
-      <!-- Coluna de filtros -->
-      <div class="w-full md:w-1/4 bg-white p-4 rounded-lg shadow">
-        <h2 class="text-xl font-semibold mb-4">Filtros</h2>
-
-        <!-- Filtro de marca -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Marca</label>
-          <select v-model="filtros.marca" class="w-full p-2 border rounded focus:ring focus:ring-blue-200">
-            <option value="">Todas as marcas</option>
-            <option v-for="marca in marcasDisponiveis" :key="marca" :value="marca">{{ marca }}</option>
-          </select>
-        </div>
-
-        <!-- Filtro de ano -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Ano</label>
-          <div class="flex gap-2">
-            <input
-                v-model.number="filtros.anoMin"
-                type="number"
-                placeholder="Min"
-                class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-            />
-            <input
-                v-model.number="filtros.anoMax"
-                type="number"
-                placeholder="Max"
-                class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-            />
-          </div>
-        </div>
-
-        <!-- Filtro de preço -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Lance Atual (R$)</label>
-          <div class="flex gap-2">
-            <input
-                v-model.number="filtros.precoMin"
-                type="number"
-                placeholder="Min"
-                class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-            />
-            <input
-                v-model.number="filtros.precoMax"
-                type="number"
-                placeholder="Max"
-                class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-            />
-          </div>
-        </div>
-
-        <!-- Filtro de quilometragem -->
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Quilometragem</label>
-          <div class="flex gap-2">
-            <input
-                v-model.number="filtros.kmMin"
-                type="number"
-                placeholder="Min"
-                class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-            />
-            <input
-                v-model.number="filtros.kmMax"
-                type="number"
-                placeholder="Max"
-                class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-            />
-          </div>
-        </div>
-
-        <!-- Filtro de sinistro -->
-        <div class="mb-4">
-          <label class="flex items-center text-sm font-medium text-gray-700">
-            <input v-model="filtros.semSinistro" type="checkbox" class="mr-2 rounded" />
-            Sem sinistro
-          </label>
-        </div>
-
-        <!-- Botão de aplicar filtros -->
-        <button
-            @click="carregarVeiculos(1)"
-            class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
-        >
-          Aplicar Filtros
-        </button>
+    <div class="flex flex-col md:flex-row relative">
+      <!-- Botão para alternar o painel de filtros -->
+      <div
+          @click="filtrosColapsados = !filtrosColapsados"
+          class="absolute left-0 top-0 bg-white p-2 rounded-r-lg shadow cursor-pointer z-10"
+          :class="{'left-72': !filtrosColapsados, 'left-0': filtrosColapsados}"
+      >
+        <Icon
+            :name="filtrosColapsados ? 'mdi:chevron-right' : 'mdi:chevron-left'"
+            class="text-lg text-gray-500"
+        />
       </div>
 
-      <!-- Coluna da tabela de veículos -->
-      <div class="w-full md:w-3/4">
-        <!-- Status e ordenação -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
-          <p class="text-gray-600">Exibindo {{ veiculos.length }} veículos</p>
+      <!-- Painel de filtros colapsável -->
+      <div
+          class="fixed md:relative inset-y-0 left-0 z-30 transform transition-transform duration-300 ease-in-out bg-white shadow-lg overflow-y-auto"
+          :class="{'translate-x-0': !filtrosColapsados, '-translate-x-full': filtrosColapsados}"
+          style="width: 18rem; max-width: 100%;"
+      >
+        <div class="p-4">
+          <h2 class="text-xl font-semibold mb-4">Filtros</h2>
 
-          <div class="flex items-center">
-            <label class="text-sm mr-2">Ordenar por:</label>
-            <select
-                v-model="filtros.ordenacao"
-                @change="carregarVeiculos(1)"
-                class="p-2 border rounded focus:ring focus:ring-blue-200"
-            >
-              <option value="lanceAtual_asc">Menor preço</option>
-              <option value="lanceAtual_desc">Maior preço</option>
-              <option value="dataCaptura_desc">Mais recentes</option>
-              <option value="valorMercado_desc">Maior valor de mercado</option>
-            </select>
+          <!-- Filtro de descrição -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Descrição ou Marca</label>
+            <input
+                v-model="filtros.termoPesquisa"
+                type="text"
+                placeholder="Pesquisar..."
+                class="w-full p-2 border rounded focus:ring focus:ring-blue-200"
+            />
+          </div>
+
+          <!-- Filtro de ano -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ano</label>
+            <div class="flex gap-2">
+              <input
+                  v-model.number="filtros.anoMin"
+                  type="number"
+                  placeholder="Min"
+                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+              />
+              <input
+                  v-model.number="filtros.anoMax"
+                  type="number"
+                  placeholder="Max"
+                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+              />
+            </div>
+          </div>
+
+          <!-- Filtro de preço -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Lance Atual (R$)</label>
+            <div class="flex gap-2">
+              <input
+                  v-model.number="filtros.precoMin"
+                  type="number"
+                  placeholder="Min"
+                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+              />
+              <input
+                  v-model.number="filtros.precoMax"
+                  type="number"
+                  placeholder="Max"
+                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+              />
+            </div>
+          </div>
+
+          <!-- Filtro de quilometragem -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Quilometragem</label>
+            <div class="flex gap-2">
+              <input
+                  v-model.number="filtros.kmMin"
+                  type="number"
+                  placeholder="Min"
+                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+              />
+              <input
+                  v-model.number="filtros.kmMax"
+                  type="number"
+                  placeholder="Max"
+                  class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
+              />
+            </div>
+          </div>
+
+          <!-- Filtro de sinistro -->
+          <div class="mb-4">
+            <label class="flex items-center text-sm font-medium text-gray-700">
+              <input v-model="filtros.semSinistro" type="checkbox" class="mr-2 rounded" />
+              Sem sinistro
+            </label>
+          </div>
+
+          <!-- Botão de aplicar filtros -->
+          <button
+              @click="aplicarFiltros"
+              class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
+          >
+            Aplicar Filtros
+          </button>
+
+          <!-- Botão de resetar filtros -->
+          <button
+              @click="resetarFiltros"
+              class="w-full mt-2 bg-gray-200 text-gray-700 py-2 px-4 rounded hover:bg-gray-300 transition"
+          >
+            Limpar Filtros
+          </button>
+        </div>
+      </div>
+
+      <!-- Conteúdo principal -->
+      <div
+          class="w-full transition-all duration-300"
+          :class="{'md:ml-4': !filtrosColapsados}"
+      >
+        <!-- Status e controles de visualização -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+          <p class="text-gray-600">Exibindo {{ veiculosFiltrados.length }} veículos</p>
+
+          <div class="flex items-center space-x-4">
+            <!-- Toggle de visualização -->
+            <div class="flex items-center">
+              <button
+                  @click="modoVisualizacao = 'cards'"
+                  class="p-2 rounded-l"
+                  :class="modoVisualizacao === 'cards' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
+              >
+                <Icon name="mdi:view-grid" class="text-sm" />
+              </button>
+              <button
+                  @click="modoVisualizacao = 'tabela'"
+                  class="p-2 rounded-r"
+                  :class="modoVisualizacao === 'tabela' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'"
+              >
+                <Icon name="mdi:view-list" class="text-sm" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -122,7 +159,7 @@
         </div>
 
         <!-- Empty state -->
-        <div v-else-if="veiculos.length === 0" class="bg-white rounded-lg shadow p-8 text-center">
+        <div v-else-if="veiculosFiltrados.length === 0" class="bg-white rounded-lg shadow p-8 text-center">
           <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -132,63 +169,110 @@
           </p>
         </div>
 
-        <!-- Veiculos grid -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-          <div v-for="veiculo in veiculos" :key="veiculo.id" class="bg-white rounded-lg shadow overflow-hidden">
+        <!-- Modo de visualização Cards -->
+        <div v-else-if="modoVisualizacao === 'cards'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+          <div v-for="veiculo in veiculosFiltrados" :key="veiculo.id" class="bg-white rounded-lg shadow overflow-hidden relative">
             <VeiculoCard :veiculo="veiculo" />
           </div>
         </div>
 
-        <!-- Paginação -->
-        <div v-if="pagination.pages > 1" class="mt-6 flex justify-center">
-          <div class="flex rounded-md">
-            <button
-                @click="paginaAnterior"
-                :disabled="pagination.page === 1"
-                :class="[
-                'px-3 py-1 rounded-l-md border',
-                pagination.page === 1
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-blue-600 hover:bg-blue-50'
-              ]"
-            >
-              Anterior
-            </button>
+        <!-- Modo de visualização Tabela -->
+        <div v-else-if="modoVisualizacao === 'tabela'" class="bg-white rounded-lg shadow overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Veículo
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="toggleOrdenacao('ano')">
+                <div class="flex items-center">
+                  Ano
+                  <Icon
+                      v-if="ordenacao.campo === 'ano'"
+                      :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
+                      class="text-sm ml-1"
+                  />
+                </div>
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="toggleOrdenacao('quilometragem')">
+                <div class="flex items-center">
+                  Quilometragem
+                  <Icon
+                      v-if="ordenacao.campo === 'quilometragem'"
+                      :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
+                      class="text-sm ml-1"
+                  />
+                </div>
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Valor
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Valor Mercado
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="toggleOrdenacao('porcentagemMercado')">
+                <div class="flex items-center">
+                  %
+                  <Icon
+                      v-if="ordenacao.campo === 'porcentagemMercado'"
+                      :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
+                      class="text-sm ml-1"
+                  />
+                </div>
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="toggleOrdenacao('score')">
+                <div class="flex items-center">
+                  Score
+                  <Icon
+                      v-if="ordenacao.campo === 'score'"
+                      :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
+                      class="text-sm ml-1"
+                  />
+                </div>
+              </th>
 
-            <template v-for="pagina in paginasVisiveis" :key="pagina">
-              <button
-                  v-if="pagina !== '...'"
-                  @click="carregarVeiculos(Number(pagina))"
-                  :class="[
-                  'px-3 py-1 border-t border-b',
-                  Number(pagina) === pagination.page
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white text-blue-600 hover:bg-blue-50'
-                ]"
-              >
-                {{ pagina }}
-              </button>
-              <span
-                  v-else
-                  class="px-3 py-1 border-t border-b bg-white text-gray-500"
-              >
-                ...
-              </span>
-            </template>
+            </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="veiculo in veiculosFiltrados" :key="veiculo.id" class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <span v-if="veiculo.sinistro" class="mr-1 text-red-500" title="Veículo com sinistro">🚨</span>
+                  <div>
+                    <a
+                        :href="veiculo.urlOrigem"
+                        target="_blank"
+                        class="text-sm font-medium text-blue-600 hover:text-blue-800"
+                    >
+                      {{ veiculo.marca }} {{ veiculo.descricao }}
+                    </a>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ veiculo.ano }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ veiculo.quilometragem.toLocaleString('pt-BR') }} km</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {{ formatarValor(veiculo.lanceAtual) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {{ formatarValor(veiculo.valorMercado) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                  <span
+                      class="px-2 py-1 text-xs font-medium rounded"
+                      :class="getPercentageClass(getPorcentagemMercado(veiculo))"
+                  >
+                    {{ getPorcentagemMercado(veiculo) }}%
+                  </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                  <span
+                      class="px-2 py-1 text-xs font-medium rounded-full"
+                      :class="getScoreClass(getScore(veiculo))"
+                  >
+                    {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
+                  </span>
+              </td>
 
-            <button
-                @click="proximaPagina"
-                :disabled="pagination.page === pagination.pages"
-                :class="[
-                'px-3 py-1 rounded-r-md border',
-                pagination.page === pagination.pages
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-blue-600 hover:bg-blue-50'
-              ]"
-            >
-              Próxima
-            </button>
-          </div>
+            </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -201,51 +285,111 @@ import type { Veiculo } from '~/types/veiculo';
 import { VeiculoRanker } from '~/services/veiculoRankerService';
 
 // Estado dos filtros
+const filtrosColapsados = ref(true);
+
 const filtros = reactive({
-  marca: '',
+  termoPesquisa: '',
   anoMin: null as number | null,
   anoMax: null as number | null,
   precoMin: null as number | null,
   precoMax: null as number | null,
   kmMin: null as number | null,
   kmMax: null as number | null,
-  semSinistro: false,
-  ordenacao: 'lanceAtual_asc'
+  semSinistro: false
+});
+
+// Estado da ordenação
+const ordenacao = reactive({
+  campo: 'score' as 'ano' | 'quilometragem' | 'porcentagemMercado' | 'score',
+  direcao: 'desc' as 'asc' | 'desc'
 });
 
 // Estado da tabela
 const veiculos = ref<Veiculo[]>([]);
-const marcasDisponiveis = ref<string[]>([]);
 const isLoading = ref(false);
-const pagination = reactive({
-  page: 1,
-  limit: 10,
-  total: 0,
-  pages: 0
+const modoVisualizacao = ref<'cards' | 'tabela'>('tabela');
+
+// Aplicar todos os filtros aos veículos
+const veiculosFiltrados = computed(() => {
+  let resultado = [...veiculos.value];
+
+  // Aplicar filtro de termo de pesquisa (descrição ou marca)
+  if (filtros.termoPesquisa && filtros.termoPesquisa.trim() !== '') {
+    const termo = filtros.termoPesquisa.toLowerCase().trim();
+    resultado = resultado.filter(
+        v => v.descricao.toLowerCase().includes(termo) || v.marca.toLowerCase().includes(termo)
+    );
+  }
+
+  // Aplicar filtro de ano
+  if (filtros.anoMin !== null) {
+    resultado = resultado.filter(v => parseInt(v.ano) >= filtros.anoMin!);
+  }
+  if (filtros.anoMax !== null) {
+    resultado = resultado.filter(v => parseInt(v.ano) <= filtros.anoMax!);
+  }
+
+  // Aplicar filtro de preço
+  if (filtros.precoMin !== null) {
+    resultado = resultado.filter(v => v.lanceAtual >= filtros.precoMin!);
+  }
+  if (filtros.precoMax !== null) {
+    resultado = resultado.filter(v => v.lanceAtual <= filtros.precoMax!);
+  }
+
+  // Aplicar filtro de quilometragem
+  if (filtros.kmMin !== null) {
+    resultado = resultado.filter(v => v.quilometragem >= filtros.kmMin!);
+  }
+  if (filtros.kmMax !== null) {
+    resultado = resultado.filter(v => v.quilometragem <= filtros.kmMax!);
+  }
+
+  // Aplicar filtro de sinistro
+  if (filtros.semSinistro) {
+    resultado = resultado.filter(v => !v.sinistro);
+  }
+
+  // Aplicar ordenação
+  resultado.sort((a, b) => {
+    let valorA: number;
+    let valorB: number;
+
+    // Determinar os valores a serem comparados com base no campo de ordenação
+    switch (ordenacao.campo) {
+      case 'ano':
+        valorA = parseInt(a.ano);
+        valorB = parseInt(b.ano);
+        break;
+      case 'quilometragem':
+        valorA = a.quilometragem;
+        valorB = b.quilometragem;
+        break;
+      case 'porcentagemMercado':
+        valorA = getPorcentagemMercado(a);
+        valorB = getPorcentagemMercado(b);
+        break;
+      case 'score':
+        valorA = getScore(a);
+        valorB = getScore(b);
+        break;
+    }
+
+    // Aplicar a direção da ordenação
+    return ordenacao.direcao === 'asc'
+        ? valorA - valorB
+        : valorB - valorA;
+  });
+
+  return resultado;
 });
 
-// Carregar veículos do banco de dados
-async function carregarVeiculos(pagina: number = 1) {
+// Carregar veículos do backend
+async function carregarVeiculos() {
   isLoading.value = true;
 
   try {
-    // Construir query params
-    const params = new URLSearchParams();
-    params.append('page', pagina.toString());
-    params.append('limit', pagination.limit.toString());
-
-    if (filtros.marca) params.append('marca', filtros.marca);
-    if (filtros.anoMin) params.append('anoMin', filtros.anoMin.toString());
-    if (filtros.anoMax) params.append('anoMax', filtros.anoMax.toString());
-    if (filtros.precoMin) params.append('precoMin', filtros.precoMin.toString());
-    if (filtros.precoMax) params.append('precoMax', filtros.precoMax.toString());
-    if (filtros.kmMin) params.append('kmMin', filtros.kmMin.toString());
-    if (filtros.kmMax) params.append('kmMax', filtros.kmMax.toString());
-    if (filtros.semSinistro) params.append('semSinistro', 'true');
-    params.append('ordenacao', filtros.ordenacao);
-
-    // Fazer requisição
-    const response = await fetch(`/api/veiculos?${params.toString()}`);
+    const response = await fetch('/api/veiculos');
 
     if (!response.ok) {
       throw new Error('Erro ao carregar veículos');
@@ -263,16 +407,6 @@ async function carregarVeiculos(pagina: number = 1) {
       dataCaptura: new Date(veiculo.dataCaptura)
     }));
 
-    // Atualizar marcas disponíveis
-    if (data.marcas) {
-      marcasDisponiveis.value = data.marcas;
-    }
-
-    // Atualizar paginação
-    pagination.page = data.pagination.page;
-    pagination.total = data.pagination.total;
-    pagination.pages = data.pagination.pages;
-
   } catch (error) {
     console.error('Erro ao carregar veículos:', error);
     veiculos.value = [];
@@ -281,58 +415,80 @@ async function carregarVeiculos(pagina: number = 1) {
   }
 }
 
-// Navegação de paginação
-function paginaAnterior() {
-  if (pagination.page > 1) {
-    carregarVeiculos(pagination.page - 1);
+// Alternar a ordenação quando clica em uma coluna
+function toggleOrdenacao(campo: 'ano' | 'quilometragem' | 'porcentagemMercado' | 'score') {
+  if (ordenacao.campo === campo) {
+    // Se já está ordenando por este campo, inverte a direção
+    ordenacao.direcao = ordenacao.direcao === 'asc' ? 'desc' : 'asc';
+  } else {
+    // Se está mudando o campo, define a direção padrão
+    ordenacao.campo = campo;
+    ordenacao.direcao = 'desc'; // Começar com decrescente (melhor para score e anos)
   }
 }
 
-function proximaPagina() {
-  if (pagination.page < pagination.pages) {
-    carregarVeiculos(pagination.page + 1);
-  }
+// Aplicar filtros
+function aplicarFiltros() {
+  // Como os filtros são reativos, não precisamos fazer nada aqui
+  // O computed veiculosFiltrados já aplica automaticamente
 }
 
-// Gerar array de números de página visíveis
-const paginasVisiveis = computed(() => {
-  if (pagination.pages <= 7) {
-    return Array.from({ length: pagination.pages }, (_, i) => String(i + 1));
-  }
+// Resetar filtros
+function resetarFiltros() {
+  filtros.termoPesquisa = '';
+  filtros.anoMin = null;
+  filtros.anoMax = null;
+  filtros.precoMin = null;
+  filtros.precoMax = null;
+  filtros.kmMin = null;
+  filtros.kmMax = null;
+  filtros.semSinistro = false;
+}
 
-  // Sempre mostrar primeira, última e algumas páginas ao redor da atual
-  const paginas: string[] = [];
+// Formatação de valores
+function formatarValor(valor: number): string {
+  return valor.toLocaleString('pt-BR');
+}
 
-  paginas.push('1');
+// Calcula a porcentagem do lance atual em relação ao valor de mercado
+function getPorcentagemMercado(veiculo: Veiculo): number {
+  if (!veiculo.valorMercado) return 0;
+  return Math.round((veiculo.lanceAtual / veiculo.valorMercado) * 100);
+}
 
-  if (pagination.page > 3) {
-    paginas.push('...');
-  }
+// Classes CSS dinâmicas baseadas no score
+function getScoreClass(score: number): string {
+  if (score >= 8.5) return 'bg-green-100 text-green-800';
+  if (score >= 7.0) return 'bg-blue-100 text-blue-800';
+  if (score >= 5.0) return 'bg-yellow-100 text-yellow-800';
+  if (score >= 3.0) return 'bg-orange-100 text-orange-800';
+  return 'bg-red-100 text-red-800';
+}
 
-  // Páginas ao redor da atual
-  const inicio = Math.max(2, pagination.page - 1);
-  const fim = Math.min(pagination.pages - 1, pagination.page + 1);
+// Ícones baseados no score
+function getScoreIcon(score: number): string {
+  if (score >= 8.5) return '🏆'; // Excelente
+  if (score >= 7.0) return '🥈'; // Muito Bom
+  if (score >= 5.0) return '🥉'; // Bom
+  if (score >= 3.0) return '⚠️'; // Regular
+  return '❌'; // Ruim
+}
 
-  for (let i = inicio; i <= fim; i++) {
-    paginas.push(String(i));
-  }
+// Classes CSS dinâmicas baseadas na porcentagem do lance
+function getPercentageClass(percentage: number): string {
+  if (percentage <= 70) return 'bg-green-100 text-green-800';
+  if (percentage <= 85) return 'bg-blue-100 text-blue-800';
+  if (percentage <= 95) return 'bg-yellow-100 text-yellow-800';
+  return 'bg-red-100 text-red-800';
+}
 
-  if (pagination.page < pagination.pages - 2) {
-    paginas.push('...');
-  }
-
-  paginas.push(String(pagination.pages));
-
-  return paginas;
-});
+// Calcular o score do veículo
+function getScore(veiculo: Veiculo): number {
+  return VeiculoRanker.calcularScore(veiculo);
+}
 
 // Carregar veículos ao montar o componente
 onMounted(() => {
   carregarVeiculos();
-});
-
-// Observar mudanças em ordenação e recarregar
-watch(() => filtros.ordenacao, (newValue) => {
-  carregarVeiculos(1);
 });
 </script>
