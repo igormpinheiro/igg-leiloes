@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
         let currentUrl = url;
         let hasNext = true;
         let count = 0;
-        const maxCount = Math.min(maxVeiculos, 30); // Limite de 30 veículos no máximo para evitar sobrecarga
+        const maxCount = 150;//Math.min(maxVeiculos, 30); // Limite de 30 veículos no máximo para evitar sobrecarga
 
         console.log(`Iniciando extração sequencial a partir de: ${currentUrl}`);
 
@@ -68,6 +68,8 @@ export default defineEventHandler(async (event) => {
 
                     count++;
                     console.log(`Veículo #${count} extraído com sucesso`);
+                    // adiciona timeout randomico de 500 a 1500 ms
+
                 } else {
                     results.push({
                         url: currentUrl,

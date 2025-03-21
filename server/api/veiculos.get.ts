@@ -11,10 +11,10 @@ export default defineEventHandler(async (event) => {
 
         // Buscar veículos com paginação
         const veiculos = await prisma.veiculo.findMany({
-            take: limit,
-            skip: skip,
+            // take: limit,
+            // skip: skip,
             orderBy: {
-                dataCaptura: 'desc'
+                descricao: 'desc'
             }
         });
 

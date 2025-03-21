@@ -6,6 +6,7 @@ export default defineEventHandler(async (event) => {
     try {
         const veiculo = await readBody(event);
 
+        console.log('Salvando:', veiculo);
         if (!veiculo || !veiculo.descricao || !veiculo.marca) {
             return createError({
                 statusCode: 400,

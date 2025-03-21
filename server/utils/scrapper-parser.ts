@@ -38,7 +38,8 @@ export class LeilaoParser {
                 lanceAtual: this.extrairLances(root).lanceAtual,
                 valorMercado,
                 dataCaptura: new Date(),
-                urlOrigem: url
+                urlOrigem: url,
+                active: true
             });
 
             // Construir objeto Veiculo

@@ -11,4 +11,5 @@ export interface Veiculo {
     valorMercado: number;
     dataCaptura: Date;
     urlOrigem: string;
+    active: boolean;
 }

@@ -1,10 +1,6 @@
 <!-- pages/index.vue -->
 <template>
   <div class="container mx-auto px-4 py-8">
-<!--    <header class="mb-8">-->
-<!--      <h1 class="text-3xl font-bold text-gray-800">Leilão de Carros</h1>-->
-<!--      <p class="text-gray-600">Encontre as melhores oportunidades em leilões de veículos</p>-->
-<!--    </header>-->
 
     <div class="flex flex-col md:flex-row min-h-[calc(100vh-12rem)]">
       <!-- Container do painel de filtros e botão -->
@@ -109,6 +105,14 @@
               </label>
             </div>
 
+            <!-- Filtro de veículos ativos -->
+            <div class="mb-4">
+              <label class="flex items-center text-sm font-medium text-gray-700">
+                <input v-model="filtros.apenasAtivos" type="checkbox" class="mr-2 rounded" />
+                Apenas veículos ativos
+              </label>
+            </div>
+
             <!-- Botão de aplicar filtros -->
             <button
                 @click="aplicarFiltros"
@@ -184,8 +188,13 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
             <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="toggleOrdenacao('descricao')">
                 Veículo
+                <Icon
+                    v-if="ordenacao.campo === 'descricao'"
+                    :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
+                    class="text-sm ml-1"
+                />
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="toggleOrdenacao('ano')">
                 <div class="flex items-center">
@@ -233,6 +242,9 @@
                   />
                 </div>
               </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
             </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -253,15 +265,16 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ veiculo.ano }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ veiculo.quilometragem.toLocaleString('pt-BR') }} km</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {{ formatarValor(veiculo.lanceAtual) }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {{ formatarValor( veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial) }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {{ formatarValor(veiculo.valorMercado) }}</td>
               <td class="px-6 py-4 whitespace-nowrap">
-                  <span
-                      class="px-2 py-1 text-xs font-medium rounded"
-                      :class="getPercentageClass(getPorcentagemMercado(veiculo))"
+                  <span v-if="veiculo.valorMercado > 0"
+                        class="px-2 py-1 text-xs font-medium rounded"
+                        :class="getPercentageClass(getPorcentagemMercado(veiculo))"
                   >
                     {{ getPorcentagemMercado(veiculo) }}%
                   </span>
+                <span v-else> -- </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                   <span
@@ -270,6 +283,14 @@
                   >
                     {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
                   </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span
+                    class="px-2 py-1 text-xs font-medium rounded-full"
+                    :class="veiculo.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                >
+                  {{ veiculo.active ? 'Ativo' : 'Inativo' }}
+                </span>
               </td>
             </tr>
             </tbody>
@@ -296,12 +317,13 @@ const filtros = reactive({
   precoMax: null as number | null,
   kmMin: null as number | null,
   kmMax: null as number | null,
-  semSinistro: false
+  semSinistro: false,
+  apenasAtivos: true // Por padrão, mostrar apenas veículos ativos
 });
 
 // Estado da ordenação
 const ordenacao = reactive({
-  campo: 'score' as 'ano' | 'quilometragem' | 'porcentagemMercado' | 'score',
+  campo: 'score' as 'descricao' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'score',
   direcao: 'desc' as 'asc' | 'desc'
 });
 
@@ -351,13 +373,24 @@ const veiculosFiltrados = computed(() => {
     resultado = resultado.filter(v => !v.sinistro);
   }
 
+  // Aplicar filtro de veículos ativos
+  if (filtros.apenasAtivos) {
+    resultado = resultado.filter(v => v.active);
+  }
+
   // Aplicar ordenação
   resultado.sort((a, b) => {
-    let valorA: number;
-    let valorB: number;
+    let valorA: any;
+    let valorB: any;
 
     // Determinar os valores a serem comparados com base no campo de ordenação
     switch (ordenacao.campo) {
+      case 'descricao':
+        valorA = a.descricao;
+        valorB = b.descricao;
+        return ordenacao.direcao === 'asc'
+            ? valorA.localeCompare(valorB)
+            : valorB.localeCompare(valorA);
       case 'ano':
         valorA = parseInt(a.ano);
         valorB = parseInt(b.ano);
@@ -374,6 +407,9 @@ const veiculosFiltrados = computed(() => {
         valorA = getScore(a);
         valorB = getScore(b);
         break;
+      default:
+        valorA = 0;
+        valorB = 0;
     }
 
     // Aplicar a direção da ordenação
@@ -417,7 +453,7 @@ async function carregarVeiculos() {
 }
 
 // Alternar a ordenação quando clica em uma coluna
-function toggleOrdenacao(campo: 'ano' | 'quilometragem' | 'porcentagemMercado' | 'score') {
+function toggleOrdenacao(campo: 'descricao' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'score') {
   if (ordenacao.campo === campo) {
     // Se já está ordenando por este campo, inverte a direção
     ordenacao.direcao = ordenacao.direcao === 'asc' ? 'desc' : 'asc';
@@ -444,6 +480,7 @@ function resetarFiltros() {
   filtros.kmMin = null;
   filtros.kmMax = null;
   filtros.semSinistro = false;
+  filtros.apenasAtivos = true; // Manter como true no reset para manter a lógica padrão
 }
 
 // Formatação de valores
@@ -454,7 +491,8 @@ function formatarValor(valor: number): string {
 // Calcula a porcentagem do lance atual em relação ao valor de mercado
 function getPorcentagemMercado(veiculo: Veiculo): number {
   if (!veiculo.valorMercado) return 0;
-  return Math.round((veiculo.lanceAtual / veiculo.valorMercado) * 100);
+  const valorVeiculo = veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial;
+  return Math.round((valorVeiculo / veiculo.valorMercado) * 100);
 }
 
 // Classes CSS dinâmicas baseadas no score
@@ -477,10 +515,11 @@ function getScoreIcon(score: number): string {
 
 // Classes CSS dinâmicas baseadas na porcentagem do lance
 function getPercentageClass(percentage: number): string {
-  if (percentage <= 70) return 'bg-green-100 text-green-800';
-  if (percentage <= 85) return 'bg-blue-100 text-blue-800';
-  if (percentage <= 95) return 'bg-yellow-100 text-yellow-800';
-  return 'bg-red-100 text-red-800';
+  if (percentage < 50) return 'bg-green-500 text-white font-bold'; // Excelente (destaque maior)
+  if (percentage < 60) return 'bg-green-200 text-green-900'; // Muito Bom
+  if (percentage < 70) return 'bg-blue-100 text-blue-800'; // Bom
+  if (percentage < 80) return 'bg-yellow-100 text-yellow-800'; // Regular
+  return 'bg-red-100 text-red-800'; // Ruim
 }
 
 // Calcular o score do veículo

@@ -74,8 +74,8 @@ export const scrapperService = {
         const marcas = ['Toyota', 'Honda', 'Volkswagen', 'Hyundai', 'BYD', 'Fiat', 'Chevrolet'];
         const modelo = ['Corolla', 'Civic', 'Golf', 'HB20', 'Dolphin Plus', 'Toro', 'Onix'];
 
-        const randomMarca = marcas[Math.floor(Math.random() * marcas.length)];
-        const randomModelo = modelo[Math.floor(Math.random() * modelo.length)];
+        const randomMarca = marcas[Math.floor(Math.random() * marcas.length)]!;
+        const randomModelo = modelo[Math.floor(Math.random() * modelo.length)]!;
         const randomAno = `20${20 + Math.floor(Math.random() * 5)}/20${21 + Math.floor(Math.random() * 5)}`;
         const randomKm = Math.floor(Math.random() * 80000) + 10000;
 
