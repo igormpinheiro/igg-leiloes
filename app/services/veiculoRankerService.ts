@@ -26,7 +26,7 @@ export class VeiculoRanker {
      */
     static calcularScore(veiculo: Veiculo): number {
         // Extrair valores do veículo
-        const maiorLance = veiculo.lanceAtual || 0;
+        const maiorLance = veiculo.lanceAtual || veiculo.lanceInicial;
         const valorMercado = veiculo.valorMercado || 0;
         const quilometragem = veiculo.quilometragem || 0;
         const marca = veiculo.marca?.toLowerCase() || '';
