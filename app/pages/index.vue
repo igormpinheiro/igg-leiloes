@@ -352,12 +352,18 @@ const veiculosFiltrados = computed(() => {
     resultado = resultado.filter(v => parseInt(v.ano) <= filtros.anoMax!);
   }
 
-  // Aplicar filtro de preço
+// Aplicar filtro de preço
   if (filtros.precoMin !== null) {
-    resultado = resultado.filter(v => v.lanceAtual >= filtros.precoMin!);
+    resultado = resultado.filter(v => {
+      const valorLance = v.lanceAtual || v.lanceInicial;
+      return valorLance >= filtros.precoMin!;
+    });
   }
   if (filtros.precoMax !== null) {
-    resultado = resultado.filter(v => v.lanceAtual <= filtros.precoMax!);
+    resultado = resultado.filter(v => {
+      const valorLance = v.lanceAtual || v.lanceInicial;
+      return valorLance <= filtros.precoMax!;
+    });
   }
 
   // Aplicar filtro de quilometragem
