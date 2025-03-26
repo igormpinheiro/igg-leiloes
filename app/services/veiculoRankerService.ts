@@ -20,6 +20,36 @@ export class VeiculoRanker {
     }
 
     /**
+     * Estima a quilometragem de um veículo com base no ano de fabricação
+     * considerando 14.000 km por ano, excluindo o ano atual
+     * @param veiculo Veículo para estimar a quilometragem
+     * @returns Quilometragem estimada
+     */
+    static estimarQuilometragem(veiculo: Veiculo): number {
+        // Se a quilometragem já estiver definida e for maior que zero, retorna o valor
+        if (veiculo.quilometragem && veiculo.quilometragem > 0) {
+            return veiculo.quilometragem;
+        }
+
+        // Verifica se o veículo tem ano de fabricação
+        if (!veiculo.ano) {
+            return 0; // Se não tem ano de fabricação, não é possível estimar
+        }
+
+        const anoAtual = new Date().getFullYear();
+        const anosCompletos = anoAtual - parseInt(veiculo.ano);
+
+        // O ano atual não conta na estimativa, então subtraímos 1
+        // Se o veículo for do ano atual, consideramos 0 anos
+        const anosParaEstimativa = Math.max(0, anosCompletos - 1);
+
+        // Estimar quilometragem: 14.000 km por ano
+
+        console.log('estimativa', anosParaEstimativa * 14000)
+        return anosParaEstimativa * 14000;
+    }
+
+    /**
      * Calcula o score de um veículo com base em lucro bruto, percentual de lucro, quilometragem e marca
      * @param veiculo Veículo para calcular o score
      * @returns Score calculado entre 0 e 10 com penalidades aplicadas
@@ -28,7 +58,8 @@ export class VeiculoRanker {
         // Extrair valores do veículo
         const maiorLance = veiculo.lanceAtual || veiculo.lanceInicial;
         const valorMercado = veiculo.valorMercado || 0;
-        const quilometragem = veiculo.quilometragem || 0;
+        // Usar a função de estimativa de quilometragem quando necessário
+        const quilometragem = this.estimarQuilometragem(veiculo);
         const marca = veiculo.marca?.toLowerCase() || '';
 
         // Calcular lucro bruto e percentual de lucro
