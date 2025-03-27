@@ -2,6 +2,14 @@
 <template>
   <div class="container mx-auto px-4 py-8">
 
+    <!-- Modal de edição -->
+    <VeiculoEditModal
+        :is-open="modalEditarAberto"
+        :veiculo="veiculoSelecionado"
+        @close="fecharModalEditar"
+        @save="salvarVeiculo"
+    />
+
     <div class="flex flex-col md:flex-row min-h-[calc(100vh-12rem)]">
       <!-- Container do painel de filtros e botão -->
       <div class="relative flex-shrink-0">
@@ -179,7 +187,7 @@
         <!-- Modo de visualização Cards -->
         <div v-else-if="modoVisualizacao === 'cards'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
           <div v-for="veiculo in veiculosFiltrados" :key="veiculo.id" class="bg-white rounded-lg shadow overflow-hidden relative">
-            <VeiculoCard :veiculo="veiculo" />
+            <VeiculoCard :veiculo="veiculo" @edit="abrirModalEditar" />
           </div>
         </div>
 
@@ -248,11 +256,11 @@
             </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="veiculo in veiculosFiltrados" :key="veiculo.id" class="hover:bg-gray-50">
+            <tr v-for="veiculo in veiculosFiltrados" :key="veiculo.id" class="hover:bg-gray-50" >
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
                   <span v-if="veiculo.sinistro" class="mr-1 text-red-500" title="Veículo com sinistro">🚨</span>
-                  <div>
+                  <div class="relative">
                     <a
                         :href="veiculo.urlOrigem"
                         target="_blank"
@@ -260,6 +268,11 @@
                     >
                       {{ veiculo.marca }} {{ veiculo.descricao }}
                     </a>
+                    <span
+                        class="absolute h-1.5 w-1.5 rounded-full"
+                        :class="veiculo.active ? 'bg-green-500' : 'bg-gray-400'"
+                        :title="veiculo.active ? 'Ativo' : 'Inativo'"
+                    ></span>
                   </div>
                 </div>
               </td>
@@ -285,12 +298,13 @@
                   </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span
-                    class="px-2 py-1 text-xs font-medium rounded-full"
-                    :class="veiculo.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+                <button
+                    @click="abrirModalEditar(veiculo)"
+                    class="text-blue-600 hover:text-blue-800 mr-2"
+                    title="Editar veículo"
                 >
-                  {{ veiculo.active ? 'Ativo' : 'Inativo' }}
-                </span>
+                  <Icon name="mdi:pencil" class="text-lg" />
+                </button>
               </td>
             </tr>
             </tbody>
@@ -305,9 +319,14 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue';
 import type { Veiculo } from '~/types/veiculo';
 import { VeiculoRanker } from '~/services/veiculoRankerService';
+import VeiculoEditModal from "~/components/VeiculoEditModal.vue";
 
 // Estado dos filtros
 const filtrosColapsados = ref(true);
+
+// Estado do modal de edição
+const modalEditarAberto = ref(false);
+const veiculoSelecionado = ref<Veiculo | null>(null);
 
 const filtros = reactive({
   termoPesquisa: '',
@@ -531,6 +550,58 @@ function getPercentageClass(percentage: number): string {
 // Calcular o score do veículo
 function getScore(veiculo: Veiculo): number {
   return VeiculoRanker.calcularScore(veiculo);
+}
+
+// Funções para manipular edição de veículos
+function abrirModalEditar(veiculo: Veiculo) {
+  veiculoSelecionado.value = veiculo;
+  modalEditarAberto.value = true;
+}
+
+function fecharModalEditar() {
+  modalEditarAberto.value = false;
+  veiculoSelecionado.value = null;
+}
+
+async function salvarVeiculo(veiculoEditado: Veiculo) {
+  try {
+    // Indicar carregamento durante a operação
+    isLoading.value = true;
+
+    // Enviar para a API
+    const response = await fetch(`/api/veiculos/${veiculoEditado.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(veiculoEditado),
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao atualizar veículo');
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.message || 'Erro ao atualizar veículo');
+    }
+
+    // Atualizar o veículo na lista local
+    const index = veiculos.value.findIndex(v => v.id === veiculoEditado.id);
+    if (index !== -1) {
+      veiculos.value[index] = veiculoEditado;
+    }
+
+    // Mostrar notificação de sucesso (opcional - requer implementação de notificação)
+    alert('Veículo atualizado com sucesso!');
+
+  } catch (error) {
+    console.error('Erro ao salvar veículo:', error);
+    alert(`Erro ao salvar veículo: ${error}`);
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 // Carregar veículos ao montar o componente
