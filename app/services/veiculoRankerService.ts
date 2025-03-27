@@ -45,7 +45,6 @@ export class VeiculoRanker {
 
         // Estimar quilometragem: 14.000 km por ano
 
-        console.log('estimativa', anosParaEstimativa * 14000)
         return anosParaEstimativa * 14000;
     }
 
@@ -96,11 +95,11 @@ export class VeiculoRanker {
 
         // 4. Score para Marca
         const classificacaoMarca = {
-            excelente: ['toyota', 'honda', 'hyundai'],
-            muitoBoas: ['jeep', 'volkswagen', 'vw', 'nissan', 'mitsubishi'],
-            boas: ['chevrolet', 'chev', 'fiat', 'renault', 'ford', 'kia'],
-            regular: ['citroen', 'peugeot', 'jac'],
-            ruim: ['bmw', 'mercedes', 'audi', 'land rover', 'volvo', 'subaru', 'mazda'],
+            excelente: ['toyota', 'honda', 'hyundai', 'nissan'],
+            muitoBoas: ['jeep', 'volkswagen', 'vw', 'mitsubishi', 'mmc', 'byd'],
+            boas: ['chevrolet', 'chev', 'gm', 'fiat', 'renault', 'ford', 'kia'],
+            regular: ['citroen', 'peugeot', 'jac', 'i/jac', 'i/volvo', 'volvo', 'suzuki'],
+            ruim: ['bmw', 'mercedes', 'm.benz', 'audi', 'land rover', 'i/lr', 'lr', 'subaru', 'mazda'],
         };
 
         let scoreMarca: number;
@@ -118,12 +117,17 @@ export class VeiculoRanker {
             scoreMarca = 0; // Muito ruim
         }
 
+        // 5. Sinistro (0 se tiver sinistro, 1 se não tiver)
+        const penalizacaoSinistro = veiculo.sinistro ? 0 : 1;
+
+
         // Cálculo do score base com pesos
         const scoreBase =
-            (scoreLucroBruto * 0.35) +  // 35% de peso
+            (scoreLucroBruto * 0.35) +  // 30% de peso
             (scorePercentualLucro * 0.25) +  // 25% de peso
             (scoreQuilometragem * 0.2) +  // 20% de peso
-            (scoreMarca * 0.2);  // 20% de peso
+            (penalizacaoSinistro * 0.1) + // 10% de peso
+            (scoreMarca * 0.15);  // 15% de peso
 
         // Converter para escala de 0 a 10
         let scoreFinal = scoreBase * 10;
