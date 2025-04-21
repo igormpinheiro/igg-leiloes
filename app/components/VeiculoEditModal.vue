@@ -16,7 +16,7 @@
       <div class="p-4">
         <form @submit.prevent="salvarVeiculo">
           <!-- Summary Stats Row -->
-          <div class="bg-gray-50 p-3 mb-4 rounded-lg grid grid-cols-4 gap-4">
+          <div class="bg-gray-50 p-3 mb-4 rounded-lg grid grid-cols-5 gap-4">
             <!-- Score -->
             <div class="text-center">
               <div class="text-sm text-gray-600 mb-1">Score</div>
@@ -40,6 +40,21 @@
                     :class="getPercentageClass(getPorcentagemMercado())"
                 >
                   {{ getPorcentagemMercado() }}%
+                </span>
+                <span v-else>--</span>
+              </div>
+            </div>
+
+            <!-- Estimativa de Lucro -->
+            <div class="text-center">
+              <div class="text-sm text-gray-600 mb-1">Lucro Est.</div>
+              <div>
+                <span
+                    v-if="veiculoEditado.valorMercado > 0"
+                    class="px-2 py-1 text-sm font-medium rounded"
+                    :class="getLucroClass(calcularLucroEstimado())"
+                >
+                  {{ formatarValor(calcularLucroEstimado()) }}
                 </span>
                 <span v-else>--</span>
               </div>
@@ -237,6 +252,75 @@
               </div>
             </div>
           </div>
+
+          <!-- Detalhes da Estimativa de Lucro -->
+          <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3">Estimativa de Lucro</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- Custos -->
+              <div>
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Custos</h4>
+                <ul class="space-y-1 text-sm">
+                  <li class="flex justify-between">
+                    <span>Lance Atual:</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.lanceAtual) }}</span>
+                  </li>
+                  <li class="flex justify-between">
+                    <span>Taxa (5%):</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.lanceAtual * 0.05) }}</span>
+                  </li>
+                  <li class="flex justify-between">
+                    <span>Despesas Fixas:</span>
+                    <span>R$ 1.700,00</span>
+                  </li>
+                  <li class="flex justify-between font-medium pt-1 border-t border-blue-200">
+                    <span>Total Custos:</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.lanceAtual + (veiculoEditado.lanceAtual * 0.05) + 1700) }}</span>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Venda -->
+              <div>
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Venda</h4>
+                <ul class="space-y-1 text-sm">
+                  <li class="flex justify-between">
+                    <span>Valor de Mercado:</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.valorMercado) }}</span>
+                  </li>
+                  <li class="flex justify-between">
+                    <span>Comissão (15%):</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.valorMercado * 0.15) }}</span>
+                  </li>
+                  <li class="flex justify-between font-medium pt-1 border-t border-blue-200">
+                    <span>Valor Líquido:</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.valorMercado - (veiculoEditado.valorMercado * 0.15)) }}</span>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- Resultado -->
+              <div class="bg-blue-100 rounded-lg p-3">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Resultado</h4>
+                <div class="space-y-2">
+                  <div class="flex justify-between text-sm">
+                    <span>Valor Líquido:</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.valorMercado - (veiculoEditado.valorMercado * 0.15)) }}</span>
+                  </div>
+                  <div class="flex justify-between text-sm">
+                    <span>Total Custos:</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.lanceAtual + (veiculoEditado.lanceAtual * 0.05) + 1700) }}</span>
+                  </div>
+                  <div class="flex justify-between font-medium pt-2 border-t border-blue-300">
+                    <span>Lucro Estimado:</span>
+                    <span :class="getLucroClass(calcularLucroEstimado())">
+                      R$ {{ formatarValor(calcularLucroEstimado()) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </form>
       </div>
 
@@ -373,6 +457,28 @@ function getPercentageClass(percentage: number): string {
   if (percentage < 70) return 'bg-blue-100 text-blue-800'; // Bom
   if (percentage < 80) return 'bg-yellow-100 text-yellow-800'; // Regular
   return 'bg-red-100 text-red-800'; // Ruim
+}
+
+// Calcular o lucro estimado
+function calcularLucroEstimado(): number {
+  // (Valor atual + 5% + 1700) - 15% - valor de mercado
+  const custoTotal = veiculoEditado.lanceAtual + (veiculoEditado.lanceAtual * 0.05) + 1700;
+  const valorVendaLiquido = veiculoEditado.valorMercado - (veiculoEditado.valorMercado * 0.15);
+
+  return valorVendaLiquido - custoTotal;
+}
+
+// Classes CSS para o lucro estimado
+function getLucroClass(lucro: number): string {
+  if (lucro >= 10000) return 'text-green-600 font-bold';
+  if (lucro >= 5000) return 'text-blue-600 font-bold';
+  if (lucro >= 0) return 'text-yellow-600 font-bold';
+  return 'text-red-600 font-bold';
+}
+
+// Formatar valores monetários
+function formatarValor(valor: number): string {
+  return valor.toLocaleString('pt-BR');
 }
 
 // Fecha o modal

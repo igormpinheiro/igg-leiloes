@@ -103,6 +103,42 @@
               </dl>
             </div>
           </div>
+
+          <!-- Nova seção de estimativa de lucro -->
+          <div class="mt-8 p-4 border rounded-lg border-blue-200 bg-blue-50">
+            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-200">Estimativa de Lucro</h2>
+            <div class="space-y-3">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p class="text-sm text-gray-500">Custos Estimados:</p>
+                  <ul class="mt-1 space-y-1">
+                    <li>Lance Atual: R$ {{ formatarValor(veiculo.lanceAtual) }}</li>
+                    <li>Taxa (5%): R$ {{ formatarValor(veiculo.lanceAtual * 0.05) }}</li>
+                    <li>Despesas Fixas: R$ 1.700,00</li>
+                  </ul>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-500">Vendas:</p>
+                  <ul class="mt-1 space-y-1">
+                    <li>Valor de Mercado: R$ {{ formatarValor(veiculo.valorMercado) }}</li>
+                    <li>Comissão (15%): R$ {{ formatarValor(veiculo.valorMercado * 0.15) }}</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="mt-4 pt-3 border-t border-blue-200">
+                <div class="flex justify-between items-center">
+                  <span class="font-semibold">Lucro Estimado:</span>
+                  <span
+                      class="text-lg font-bold"
+                      :class="getLucroClass(calcularLucroEstimado)"
+                  >
+                    R$ {{ formatarValor(calcularLucroEstimado) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </template>
@@ -134,6 +170,17 @@ const { data: response, pending, error, refresh } = await useFetch(`/api/veiculo
 });
 
 const veiculo = computed(() => response.value);
+
+// Cálculo do lucro estimado
+const calcularLucroEstimado = computed(() => {
+  if (!veiculo.value) return 0;
+
+  // (Valor atual + 5% + 1700) - 15% - valor de mercado
+  const custoTotal = veiculo.value.lanceAtual + (veiculo.value.lanceAtual * 0.05) + 1700;
+  const valorVendaLiquido = veiculo.value.valorMercado - (veiculo.value.valorMercado * 0.15);
+
+  return valorVendaLiquido - custoTotal;
+});
 
 // Função para calcular o score de um veículo
 function getVeiculoScore(veiculo) {
@@ -169,5 +216,13 @@ function getEconomiaClass(economia) {
   if (economia >= 10000) return 'text-blue-600';
   if (economia >= 5000) return 'text-yellow-600';
   return 'text-gray-600';
+}
+
+// Função para determinar a classe CSS do lucro
+function getLucroClass(lucro) {
+  if (lucro >= 10000) return 'text-green-600';
+  if (lucro >= 5000) return 'text-blue-600';
+  if (lucro >= 0) return 'text-yellow-600';
+  return 'text-red-600';
 }
 </script>

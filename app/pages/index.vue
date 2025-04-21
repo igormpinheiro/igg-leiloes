@@ -240,6 +240,17 @@
                   />
                 </div>
               </th>
+              <!-- Nova coluna de Lucro Estimado -->
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="toggleOrdenacao('lucroEstimado')">
+                <div class="flex items-center">
+                  Lucro Est.
+                  <Icon
+                      v-if="ordenacao.campo === 'lucroEstimado'"
+                      :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
+                      class="text-sm ml-1"
+                  />
+                </div>
+              </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="toggleOrdenacao('score')">
                 <div class="flex items-center">
                   Score
@@ -287,6 +298,16 @@
                   >
                     {{ getPorcentagemMercado(veiculo) }}%
                   </span>
+                <span v-else> -- </span>
+              </td>
+              <!-- Nova célula para o Lucro Estimado -->
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span v-if="veiculo.valorMercado > 0"
+                      class="px-2 py-1 text-xs font-medium rounded"
+                      :class="getLucroClass(calcularLucroEstimado(veiculo))"
+                >
+                  R$ {{ formatarValor(calcularLucroEstimado(veiculo)) }}
+                </span>
                 <span v-else> -- </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
@@ -342,7 +363,7 @@ const filtros = reactive({
 
 // Estado da ordenação
 const ordenacao = reactive({
-  campo: 'score' as 'descricao' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'score',
+  campo: 'score' as 'descricao' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'lucroEstimado' | 'score',
   direcao: 'desc' as 'asc' | 'desc'
 });
 
@@ -428,6 +449,10 @@ const veiculosFiltrados = computed(() => {
         valorA = getPorcentagemMercado(a);
         valorB = getPorcentagemMercado(b);
         break;
+      case 'lucroEstimado':
+        valorA = calcularLucroEstimado(a);
+        valorB = calcularLucroEstimado(b);
+        break;
       case 'score':
         valorA = getScore(a);
         valorB = getScore(b);
@@ -478,7 +503,7 @@ async function carregarVeiculos() {
 }
 
 // Alternar a ordenação quando clica em uma coluna
-function toggleOrdenacao(campo: 'descricao' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'score') {
+function toggleOrdenacao(campo: 'descricao' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'lucroEstimado' | 'score') {
   if (ordenacao.campo === campo) {
     // Se já está ordenando por este campo, inverte a direção
     ordenacao.direcao = ordenacao.direcao === 'asc' ? 'desc' : 'asc';
@@ -518,6 +543,27 @@ function getPorcentagemMercado(veiculo: Veiculo): number {
   if (!veiculo.valorMercado) return 0;
   const valorVeiculo = veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial;
   return Math.round((valorVeiculo / veiculo.valorMercado) * 100);
+}
+
+// Função para calcular o lucro estimado
+function calcularLucroEstimado(veiculo: Veiculo): number {
+  if (!veiculo.valorMercado) return 0;
+
+  if(!veiculo.lanceAtual) veiculo.lanceAtual = veiculo.lanceInicial;
+
+  // (Valor atual + 5% + 1700) - 15% - valor de mercado
+  const custoTotal = veiculo.lanceAtual + (veiculo.lanceAtual * 0.05) + 1700;
+  const valorVendaLiquido = veiculo.valorMercado - (veiculo.valorMercado * 0.15);
+
+  return valorVendaLiquido - custoTotal;
+}
+
+// Classes CSS para o lucro estimado
+function getLucroClass(lucro: number): string {
+  if (lucro >= 10000) return 'bg-green-100 text-green-800';
+  if (lucro >= 5000) return 'bg-blue-100 text-blue-800';
+  if (lucro >= 0) return 'bg-yellow-100 text-yellow-800';
+  return 'bg-red-100 text-red-800';
 }
 
 // Classes CSS dinâmicas baseadas no score
