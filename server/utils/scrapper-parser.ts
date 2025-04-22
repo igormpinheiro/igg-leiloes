@@ -48,14 +48,16 @@ export class LeilaoParser {
                 descricao,
                 marca,
                 ano,
-                score,
+                // score,
                 quilometragem,
                 sinistro,
                 lanceInicial,
                 lanceAtual,
                 valorMercado,
                 dataCaptura: new Date(),
-                urlOrigem: url
+                urlOrigem: url,
+                active: true,
+                leiloeiro: 'parquedosleiloes'
             };
 
             return veiculo;

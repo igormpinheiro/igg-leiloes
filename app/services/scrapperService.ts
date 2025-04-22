@@ -16,7 +16,7 @@ export const scrapperService = {
         try {
             // Verificar se a URL é de um site suportado
             if (!this.isUrlSupported(url)) {
-                throw new Error('URL não suportada. Atualmente suportamos apenas o site Parque dos Leilões.');
+                throw new Error('URL não suportada. Atualmente suportamos apenas os sites Parque dos Leilões e Leilo.');
             }
 
             // Chamar a API de extração
@@ -43,6 +43,12 @@ export const scrapperService = {
             const veiculo = data.data;
             veiculo.dataCaptura = new Date(veiculo.dataCaptura);
 
+            // Assegurar que a propriedade leiloeiro exista
+            if (!veiculo.leiloeiro) {
+                // Determinar o leiloeiro com base na URL
+                veiculo.leiloeiro = this.determinarLeiloeiro(url);
+            }
+
             return veiculo;
         } catch (error: any) {
             console.error('Erro no scrapper:', error);
@@ -56,10 +62,23 @@ export const scrapperService = {
     isUrlSupported(url: string): boolean {
         const supportedDomains = [
             'parquedosleiloes.com.br',
+            'leilo.com.br',
             // Adicionar outros domínios suportados aqui
         ];
 
         return supportedDomains.some(domain => url.includes(domain));
+    },
+
+    /**
+     * Determina o leiloeiro com base na URL
+     */
+    determinarLeiloeiro(url: string): string {
+        if (url.includes('parquedosleiloes.com.br')) {
+            return 'Parque dos Leilões';
+        } else if (url.includes('leilo.com.br')) {
+            return 'Leilo';
+        }
+        return 'Desconhecido';
     },
 
     /**
@@ -85,19 +104,24 @@ export const scrapperService = {
         const lanceAtual = lanceInicial + incremento * (Math.floor(Math.random() * 5) + 1);
         const valorMercado = lanceAtual + Math.floor(Math.random() * 30000) + 10000;
 
+        // Determinar leiloeiro com base na URL
+        const leiloeiro = this.determinarLeiloeiro(url);
+
         return {
             id: Math.random().toString(36).substring(2, 15),
             descricao: randomMarca.toUpperCase() + ' ' + randomModelo.toUpperCase(),
             marca: randomMarca.toUpperCase(),
             ano: randomAno,
-            score: parseFloat((Math.random() * 2 + 7).toFixed(1)), // Score entre 7.0 e 9.0
+            // score: parseFloat((Math.random() * 2 + 7).toFixed(1)), // Score entre 7.0 e 9.0
             quilometragem: randomKm,
             sinistro: Math.random() > 0.7, // 30% de chance de ter sinistro
             lanceInicial: lanceInicial,
             lanceAtual: lanceAtual,
             valorMercado: valorMercado,
             dataCaptura: new Date(),
-            urlOrigem: url
+            urlOrigem: url,
+            leiloeiro: leiloeiro,
+            active: true
         };
     }
 };

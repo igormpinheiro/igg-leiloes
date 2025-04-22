@@ -1,6 +1,7 @@
 // server/api/scrapper/extract.post.ts
 import type { Veiculo } from '~/types/veiculo';
 import { LeilaoParser } from '../../utils/scrapper-parser';
+import { LeiloParser } from '../../utils/leilo-parser'; // Importando o novo parser
 import { VeiculoRanker } from '~/services/veiculoRankerService';
 
 export default defineEventHandler(async (event) => {
@@ -15,10 +16,10 @@ export default defineEventHandler(async (event) => {
         }
 
         // Verificar se a URL é de um site suportado
-        if (!url.includes('parquedosleiloes.com.br')) {
+        if (!url.includes('parquedosleiloes.com.br') && !url.includes('leilo.com.br')) {
             return createError({
                 statusCode: 400,
-                statusMessage: 'URL não suportada. Atualmente só suportamos o site Parque dos Leilões.'
+                statusMessage: 'URL não suportada. Atualmente só suportamos os sites Parque dos Leilões e Leilo.'
             });
         }
 
@@ -41,14 +42,22 @@ export default defineEventHandler(async (event) => {
         const html = await response.text();
         console.log(`Recebido HTML com ${html.length} caracteres`);
 
-        // Usar o parser avançado para extrair os dados
-        const veiculo = await LeilaoParser.parseParqueDoLeiloes(html, url);
+        // Determinar qual parser utilizar com base na URL
+        let veiculo: Veiculo | null = null;
+
+        if (url.includes('parquedosleiloes.com.br')) {
+            // Usar o parser do Parque dos Leilões
+            veiculo = await LeilaoParser.parseParqueDoLeiloes(html, url);
+        } else if (url.includes('leilo.com.br')) {
+            // Usar o novo parser do Leilo
+            veiculo = await LeiloParser.parseLeiloBr(html, url);
+        }
 
         if (!veiculo) {
-            console.log('Leilão cancelado ou inválido, nenhum veículo extraído');
+            console.log('Leilão cancelado, inválido ou veículo descartado (sucata/grande monta). Nenhum veículo extraído');
             return {
                 success: false,
-                message: 'Leilão cancelado ou sem lance inicial. Nenhum veículo extraído.'
+                message: 'Leilão cancelado, inválido ou veículo descartado (sucata/grande monta). Nenhum veículo extraído.'
             };
         }
 

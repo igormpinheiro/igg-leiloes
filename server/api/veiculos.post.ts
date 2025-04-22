@@ -26,7 +26,8 @@ export default defineEventHandler(async (event) => {
                 lanceAtual: veiculo.lanceAtual,
                 valorMercado: veiculo.valorMercado,
                 dataCaptura: new Date(veiculo.dataCaptura),
-                urlOrigem: veiculo.urlOrigem
+                urlOrigem: veiculo.urlOrigem,
+                leiloeiro: veiculo.leiloeiro
             }
         });
 

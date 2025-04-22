@@ -12,4 +12,5 @@ export interface Veiculo {
     dataCaptura: Date;
     urlOrigem: string;
     active: boolean;
+    leiloeiro?: string;
 }

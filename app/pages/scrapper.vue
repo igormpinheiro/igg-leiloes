@@ -367,6 +367,7 @@ async function iniciarScrapper() {
 
   try {
     // Utilizar o serviço de scrapper
+
     const novoVeiculo = await scrapperService.executarScrapper(url.value);
 
     resultadoScrapper.value = novoVeiculo;

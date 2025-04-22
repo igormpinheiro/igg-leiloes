@@ -270,7 +270,14 @@
             <tr v-for="veiculo in veiculosFiltrados" :key="veiculo.id" class="hover:bg-gray-50" >
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
-                  <span v-if="veiculo.sinistro" class="mr-1 text-red-500" title="Veículo com sinistro">🚨</span>
+                  <!-- Badge do Leiloeiro -->
+                  <span
+                      class="w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold mr-2"
+                      :class="getLeiloeiroClass(veiculo.leiloeiro)"
+                      :title="veiculo.leiloeiro || 'Leiloeiro não especificado'"
+                  >
+                    {{ getLeiloeiroInitial(veiculo.leiloeiro) }}
+                  </span>
                   <div class="relative">
                     <a
                         :href="veiculo.urlOrigem"
@@ -279,6 +286,7 @@
                     >
                       {{ veiculo.marca }} {{ veiculo.descricao }}
                     </a>
+                  <span v-if="veiculo.sinistro" class="mr-1 text-red-500" title="Veículo com sinistro">🚨</span>
                     <span
                         class="absolute h-1.5 w-1.5 rounded-full"
                         :class="veiculo.active ? 'bg-green-500' : 'bg-gray-400'"
@@ -512,6 +520,21 @@ function toggleOrdenacao(campo: 'descricao' | 'ano' | 'quilometragem' | 'porcent
     ordenacao.campo = campo;
     ordenacao.direcao = 'desc'; // Começar com decrescente (melhor para score e anos)
   }
+}
+
+// Funções para lidar com leiloeiros
+function getLeiloeiroInitial(leiloeiro: string | undefined): string {
+  if (!leiloeiro) return '?';
+  if (leiloeiro.toLowerCase().includes('parque')) return 'P';
+  if (leiloeiro.toLowerCase().includes('leilo')) return 'L';
+  return leiloeiro.charAt(0).toUpperCase();
+}
+
+function getLeiloeiroClass(leiloeiro: string | undefined): string {
+  if (!leiloeiro) return 'bg-gray-500';
+  if (leiloeiro.toLowerCase().includes('parque')) return 'bg-purple-500';
+  if (leiloeiro.toLowerCase().includes('leilo')) return 'bg-orange-500';
+  return 'bg-gray-500';
 }
 
 // Aplicar filtros
