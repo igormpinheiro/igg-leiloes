@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
         }
 
         // Salvar no banco de dados usando Prisma
-        const novoVeiculo = await prisma.veiculo.create({
+        const novoVeiculo : Veiculo = await prisma.veiculo.create({
             data: {
                 descricao: veiculo.descricao,
                 marca: veiculo.marca,
@@ -27,6 +27,7 @@ export default defineEventHandler(async (event) => {
                 valorMercado: veiculo.valorMercado,
                 dataCaptura: new Date(veiculo.dataCaptura),
                 urlOrigem: veiculo.urlOrigem,
+                active: true,
                 leiloeiro: veiculo.leiloeiro
             }
         });
