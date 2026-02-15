@@ -17,10 +17,10 @@ export class LeiloParser {
         try {
             const root = parse(html);
 
-            // Estratégia 1: Tentar extrair dados estruturados do HTML inline
+            // Estratégia 1: Tentar extrair dados estruturados do HTML inline (JSON)
             const jsonLdData = this.extrairDadosJsonLd(html);
 
-            // Extrair descrição completa (título)
+            // Extrair descrição completa (título) - JSON primeiro, HTML como fallback
             const descricaoCompleta = jsonLdData?.nome || this.extrairTitulo(root);
 
             // Verificar se é sucata ou grande monta (nesse caso, descartar)
@@ -30,22 +30,26 @@ export class LeiloParser {
                 return null;
             }
 
-            // Processar descrição para obter marca e descrição
+            // Processar descrição para obter marca e descrição - JSON primeiro
             const { marca, descricao } = this.processarDescricao(descricaoCompleta, jsonLdData?.marca);
 
-            // Extrair ano
-            const ano = this.extrairAno(root);
+            // Extrair ano - JSON primeiro, HTML como fallback
+            const ano = jsonLdData?.ano || this.extrairAno(root);
 
-            // Extrair quilometragem
-            const quilometragem = this.extrairQuilometragem(root);
+            // Extrair quilometragem - JSON primeiro, HTML como fallback
+            const quilometragem = jsonLdData?.quilometragem !== undefined && jsonLdData.quilometragem > 0
+                ? jsonLdData.quilometragem
+                : this.extrairQuilometragem(root);
 
             // Verificar sinistro
             const sinistro = this.extrairSinistro(root);
 
-            // Extrair valor de mercado
-            const valorMercado = this.extrairValorMercado(root);
+            // Extrair valor de mercado - JSON primeiro, HTML como fallback
+            const valorMercado = jsonLdData?.valorMercado && jsonLdData.valorMercado > 0
+                ? jsonLdData.valorMercado
+                : this.extrairValorMercado(root);
 
-            // Extrair lances - usa dados estruturados primeiro se disponível
+            // Extrair lances - JSON primeiro, HTML como fallback
             const { lanceInicial, lanceAtual } = (jsonLdData?.lanceInicial && jsonLdData.lanceInicial > 0)
                 ? { lanceInicial: jsonLdData.lanceInicial, lanceAtual: jsonLdData.lanceAtual || jsonLdData.lanceInicial }
                 : this.extrairLances(root);
@@ -94,12 +98,108 @@ export class LeiloParser {
     }
 
     /**
-     * Extrai dados do JSON-LD (Schema.org) presente no HTML
+     * Extrai dados estruturados do HTML (LoteSelecionadoState e objeto "valor")
      * @param html HTML completo da página
      * @returns Objeto com dados extraídos ou null se não encontrar
      */
-    private static extrairDadosJsonLd(html: string): { nome?: string, marca?: string, lanceInicial?: number, lanceAtual?: number } | null {
+    private static extrairDadosJsonLd(html: string): {
+        nome?: string,
+        marca?: string,
+        lanceInicial?: number,
+        lanceAtual?: number,
+        descricao?: string,
+        ano?: string,
+        quilometragem?: number,
+        valorMercado?: number,
+        situacao?: string
+    } | null {
         try {
+            // Estratégia 0: Tentar extrair do LoteSelecionadoState (mais completo e confiável)
+            const loteStateMatch = html.match(/"LoteSelecionadoState"\s*:\s*\{/);
+            if (loteStateMatch) {
+                try {
+                    const startIndex = loteStateMatch.index! + loteStateMatch[0].length - 1;
+                    let bracketCount = 0;
+                    let endIndex = startIndex;
+
+                    for (let i = startIndex; i < Math.min(startIndex + 10000, html.length); i++) {
+                        if (html[i] === '{') bracketCount++;
+                        else if (html[i] === '}') {
+                            bracketCount--;
+                            if (bracketCount === 0) {
+                                endIndex = i + 1;
+                                break;
+                            }
+                        }
+                    }
+
+                    const stateJson = html.substring(startIndex, endIndex);
+                    const state = JSON.parse(stateJson);
+
+                    const resultado: any = {};
+
+                    // Extrair nome e marca
+                    if (state.nome) {
+                        resultado.nome = state.nome;
+                        if (state.nome.includes('/')) {
+                            resultado.marca = state.nome.split('/')[0].trim();
+                        }
+                    }
+
+                    // Extrair situação
+                    if (state.situacao) {
+                        resultado.situacao = state.situacao;
+                    }
+
+                    // Extrair descrição
+                    if (state.descricao) {
+                        resultado.descricao = state.descricao.trim();
+                    }
+
+                    // Extrair dados do veículo
+                    if (state.veiculo) {
+                        const veiculo = state.veiculo;
+
+                        if (veiculo.km && veiculo.km > 0) {
+                            resultado.quilometragem = veiculo.km;
+                        }
+
+                        if (veiculo.anoModelo && veiculo.anoFabricacao) {
+                            resultado.ano = `${veiculo.anoFabricacao}/${veiculo.anoModelo}`;
+                        } else if (veiculo.anoModelo) {
+                            resultado.ano = veiculo.anoModelo.toString();
+                        }
+
+                        if (veiculo.valorMercado && veiculo.valorMercado > 0) {
+                            resultado.valorMercado = veiculo.valorMercado;
+                        }
+                    }
+
+                    // Extrair lances do objeto valor
+                    if (state.valor) {
+                        const valor = state.valor;
+
+                        if (valor.minimo && valor.minimo > 0) {
+                            resultado.lanceInicial = valor.minimo;
+                            resultado.lanceAtual = valor.minimo; // Default
+
+                            // Verificar se há lance atual diferente
+                            if (valor.valorProposta && valor.valorProposta > 0) {
+                                resultado.lanceAtual = valor.valorProposta;
+                            } else if (valor.lance && valor.lance.valor && valor.lance.valor > 0) {
+                                resultado.lanceAtual = valor.lance.valor;
+                            }
+                        }
+                    }
+
+                    if (Object.keys(resultado).length > 0) {
+                        return resultado;
+                    }
+                } catch (e) {
+                    console.error('Erro ao parsear LoteSelecionadoState:', e);
+                    // Continua para as outras estratégias
+                }
+            }
             // Estratégia 1: Extrair do objeto "valor":{"minimo":..., "valorProposta":...}
             // Este objeto contém tanto o lance inicial quanto o atual
             // Buscar um bloco maior que inclua o objeto valor e o lance aninhado
