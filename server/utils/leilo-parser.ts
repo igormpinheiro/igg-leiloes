@@ -17,8 +17,11 @@ export class LeiloParser {
         try {
             const root = parse(html);
 
+            // Estratégia 1: Tentar extrair dados estruturados do HTML inline
+            const jsonLdData = this.extrairDadosJsonLd(html);
+
             // Extrair descrição completa (título)
-            const descricaoCompleta = this.extrairTitulo(root);
+            const descricaoCompleta = jsonLdData?.nome || this.extrairTitulo(root);
 
             // Verificar se é sucata ou grande monta (nesse caso, descartar)
             if (descricaoCompleta.toUpperCase().includes('SUCATA') ||
@@ -28,7 +31,7 @@ export class LeiloParser {
             }
 
             // Processar descrição para obter marca e descrição
-            const { marca, descricao } = this.processarDescricao(descricaoCompleta);
+            const { marca, descricao } = this.processarDescricao(descricaoCompleta, jsonLdData?.marca);
 
             // Extrair ano
             const ano = this.extrairAno(root);
@@ -42,8 +45,10 @@ export class LeiloParser {
             // Extrair valor de mercado
             const valorMercado = this.extrairValorMercado(root);
 
-            // Extrair lances
-            const { lanceInicial, lanceAtual } = this.extrairLances(root);
+            // Extrair lances - usa JSON-LD primeiro se disponível
+            const { lanceInicial, lanceAtual } = jsonLdData?.valorLance
+                ? { lanceInicial: jsonLdData.valorLance, lanceAtual: jsonLdData.valorLance }
+                : this.extrairLances(root);
 
             // Gerar ID único
             const id = Math.random().toString(36).substring(2, 15);
@@ -85,6 +90,43 @@ export class LeiloParser {
         } catch (error) {
             console.error('Erro ao parsear HTML do Leilo:', error);
             throw new Error('Falha ao extrair informações da página Leilo. Verifique se o formato do site mudou.');
+        }
+    }
+
+    /**
+     * Extrai dados do JSON-LD (Schema.org) presente no HTML
+     * @param html HTML completo da página
+     * @returns Objeto com dados extraídos ou null se não encontrar
+     */
+    private static extrairDadosJsonLd(html: string): { nome?: string, marca?: string, valorLance?: number } | null {
+        try {
+            // Estratégia 1: Extrair do objeto "valor":{"minimo":...}
+            const valorMinimoMatch = html.match(/"valor":\s*{\s*"minimo"\s*:\s*(\d+)/);
+            if (valorMinimoMatch) {
+                const valorLance = parseInt(valorMinimoMatch[1]);
+                return { valorLance };
+            }
+
+            // Estratégia 2: Extrair de window.__Q_META__ -> "price": "54000.00"
+            const qMetaMatch = html.match(/"price"\s*:\s*"([\d.]+)"/);
+            if (qMetaMatch) {
+                const valorLance = parseFloat(qMetaMatch[1]);
+                return { valorLance };
+            }
+
+            // Estratégia 3: Extrair das meta tags description
+            const metaDescMatch = html.match(/lance inicial de R\$\s*([\d.,]+)/i);
+            if (metaDescMatch) {
+                const valorText = metaDescMatch[1];
+                const valorLance = this.extrairValorNumerico('R$ ' + valorText);
+                return { valorLance };
+            }
+
+            return null;
+
+        } catch (error) {
+            console.error('Erro ao extrair dados estruturados:', error);
+            return null;
         }
     }
 
@@ -139,10 +181,24 @@ export class LeiloParser {
     /**
      * Processa a descrição para separar marca e descrição,
      * removendo a marca do início da descrição quando apropriado
+     * @param descricaoCompleta Descrição completa do veículo
+     * @param marcaJsonLd Marca extraída do JSON-LD (opcional, tem prioridade)
      */
-    private static processarDescricao(descricaoCompleta: string): { marca: string, descricao: string } {
-        let marca = '';
+    private static processarDescricao(descricaoCompleta: string, marcaJsonLd?: string): { marca: string, descricao: string } {
+        let marca = marcaJsonLd || '';
         let descricao = descricaoCompleta;
+
+        // Se já temos a marca do JSON-LD, usar ela e remover da descrição se necessário
+        if (marcaJsonLd) {
+            // Remover a marca do início da descrição se estiver lá
+            const regex = new RegExp(`^${marcaJsonLd}[\\s\\/\\-]+`, 'i');
+            descricao = descricao.replace(regex, '').trim();
+
+            // Se a descrição começa com "Leilão de", remover também
+            descricao = descricao.replace(/^Leilão\s+de\s+\w+\s+/i, '').trim();
+
+            return { marca: marcaJsonLd, descricao };
+        }
 
         // Padrões comuns em descrições de veículos
         const marcasConhecidas = ['FIAT', 'VOLKSWAGEN', 'VW', 'TOYOTA', 'HONDA', 'HYUNDAI', 'CHEVROLET', 'FORD',
@@ -201,8 +257,8 @@ export class LeiloParser {
     private static extrairLances(root: HTMLElement): { lanceInicial: number, lanceAtual: number } {
         try {
             // Estratégia 1: Procurar pelo valor do lote na classe valor-lote
-            const valorLoteElement = root.querySelector('.valor-lote');
-            if (valorLoteElement) {
+            const valorLoteElements = root.querySelectorAll('.valor-lote');
+            for (const valorLoteElement of valorLoteElements) {
                 // O valor geralmente está em um span dentro deste elemento
                 const spanElement = valorLoteElement.querySelector('span');
                 if (spanElement) {
@@ -213,6 +269,13 @@ export class LeiloParser {
                         return { lanceInicial: valor, lanceAtual: valor };
                     }
                 }
+
+                // Fallback: tentar extrair diretamente do elemento se não houver span
+                const valorText = valorLoteElement.textContent.trim();
+                const valor = this.extrairValorNumerico(valorText);
+                if (valor > 0) {
+                    return { lanceInicial: valor, lanceAtual: valor };
+                }
             }
 
             // Estratégia 2: Procurar nos elementos da descrição detalhada dos valores
@@ -221,7 +284,7 @@ export class LeiloParser {
                 const inputs = monetarioLanceElement.querySelectorAll('input');
                 for (const input of inputs) {
                     const value = input.getAttribute('value');
-                    if (value && value.includes('R$')) {
+                    if (value && (value.includes('R$') || value.includes('R '))) {
                         const valor = this.extrairValorNumerico(value);
                         if (valor > 0) {
                             return { lanceInicial: valor, lanceAtual: valor };
@@ -388,8 +451,8 @@ export class LeiloParser {
     private static extrairValorNumerico(texto: string): number {
         if (!texto) return 0;
 
-        // Extrair números com R$
-        const valorPattern = /R\$\s*([\d.,]+)/;
+        // Extrair números com R$ ou R (com $ opcional)
+        const valorPattern = /R\s*\$?\s*([\d.,]+)/;
         const valorMatch = texto.match(valorPattern);
 
         if (valorMatch && valorMatch[1]) {
