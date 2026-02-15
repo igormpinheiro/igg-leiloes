@@ -45,9 +45,9 @@ export class LeiloParser {
             // Extrair valor de mercado
             const valorMercado = this.extrairValorMercado(root);
 
-            // Extrair lances - usa JSON-LD primeiro se disponível
-            const { lanceInicial, lanceAtual } = jsonLdData?.valorLance
-                ? { lanceInicial: jsonLdData.valorLance, lanceAtual: jsonLdData.valorLance }
+            // Extrair lances - usa dados estruturados primeiro se disponível
+            const { lanceInicial, lanceAtual } = (jsonLdData?.lanceInicial && jsonLdData.lanceInicial > 0)
+                ? { lanceInicial: jsonLdData.lanceInicial, lanceAtual: jsonLdData.lanceAtual || jsonLdData.lanceInicial }
                 : this.extrairLances(root);
 
             // Gerar ID único
@@ -98,28 +98,52 @@ export class LeiloParser {
      * @param html HTML completo da página
      * @returns Objeto com dados extraídos ou null se não encontrar
      */
-    private static extrairDadosJsonLd(html: string): { nome?: string, marca?: string, valorLance?: number } | null {
+    private static extrairDadosJsonLd(html: string): { nome?: string, marca?: string, lanceInicial?: number, lanceAtual?: number } | null {
         try {
-            // Estratégia 1: Extrair do objeto "valor":{"minimo":...}
-            const valorMinimoMatch = html.match(/"valor":\s*{\s*"minimo"\s*:\s*(\d+)/);
-            if (valorMinimoMatch) {
-                const valorLance = parseInt(valorMinimoMatch[1]);
-                return { valorLance };
+            // Estratégia 1: Extrair do objeto "valor":{"minimo":..., "valorProposta":...}
+            // Este objeto contém tanto o lance inicial quanto o atual
+            // Buscar um bloco maior que inclua o objeto valor e o lance aninhado
+            const valorBlockMatch = html.match(/"valor":\s*\{[^}]*(?:"lance":\s*\{[^}]*\})?[^}]*\}/);
+            if (valorBlockMatch) {
+                const valorBlock = valorBlockMatch[0];
+
+                // Extrair lance inicial (minimo)
+                const minimoMatch = valorBlock.match(/"minimo"\s*:\s*(\d+)/);
+                const lanceInicial = minimoMatch ? parseInt(minimoMatch[1]) : 0;
+
+                // Extrair lance atual (valorProposta ou lance.valor)
+                let lanceAtual = lanceInicial; // Default: usa o inicial
+
+                // Primeiro tenta pegar valorProposta (pode ser null ou número)
+                const propostaMatch = valorBlock.match(/"valorProposta"\s*:\s*(\d+)/);
+                if (propostaMatch) {
+                    lanceAtual = parseInt(propostaMatch[1]);
+                } else {
+                    // Se valorProposta for null, tenta pegar lance.valor do mesmo bloco
+                    const lanceValorMatch = valorBlock.match(/"lance":\s*\{[^}]*"valor"\s*:\s*(\d+)/);
+                    if (lanceValorMatch) {
+                        lanceAtual = parseInt(lanceValorMatch[1]);
+                    }
+                    // Se lance.valor também for null, lanceAtual já está = lanceInicial
+                }
+                if (lanceInicial > 0) {
+                    return { lanceInicial, lanceAtual };
+                }
             }
 
             // Estratégia 2: Extrair de window.__Q_META__ -> "price": "54000.00"
             const qMetaMatch = html.match(/"price"\s*:\s*"([\d.]+)"/);
             if (qMetaMatch) {
-                const valorLance = parseFloat(qMetaMatch[1]);
-                return { valorLance };
+                const valor = parseFloat(qMetaMatch[1]);
+                return { lanceInicial: valor, lanceAtual: valor };
             }
 
             // Estratégia 3: Extrair das meta tags description
             const metaDescMatch = html.match(/lance inicial de R\$\s*([\d.,]+)/i);
             if (metaDescMatch) {
                 const valorText = metaDescMatch[1];
-                const valorLance = this.extrairValorNumerico('R$ ' + valorText);
-                return { valorLance };
+                const valor = this.extrairValorNumerico('R$ ' + valorText);
+                return { lanceInicial: valor, lanceAtual: valor };
             }
 
             return null;
@@ -391,10 +415,10 @@ export class LeiloParser {
         const kmElements = root.querySelectorAll('.text-categoria');
 
         for (const element of kmElements) {
-            const text = element.textContent.trim();
+            const text = element.textContent.trim().toLowerCase();
 
-            // Padrão de quilometragem: números seguidos por "km" ou sozinhos (em contexto)
-            const kmPattern = /(\d{1,3}(?:\.\d{3})*|\d+)(?:\s*km)?/i;
+            // Padrão de quilometragem: números seguidos OBRIGATORIAMENTE por "km"
+            const kmPattern = /(\d{1,3}(?:\.\d{3})*|\d+)\s*km/i;
             const kmMatch = text.match(kmPattern);
 
             if (kmMatch && !text.includes('/')) { // Evitar confundir ano com km
@@ -404,6 +428,27 @@ export class LeiloParser {
                 // Verificar se é um valor plausível para quilometragem
                 if (kmValue > 0 && kmValue < 1000000) {
                     return kmValue;
+                }
+            }
+        }
+
+        // Se não encontrar nos elementos categoria, procurar no HTML inteiro com contexto
+        const allElements = root.querySelectorAll('*');
+        for (const element of allElements) {
+            const text = element.textContent.trim().toLowerCase();
+
+            // Procurar por padrões específicos de quilometragem
+            if (text.includes('quilometragem') || text.includes('odômetro') || text.includes('odometro')) {
+                const kmPattern = /(\d{1,3}(?:\.\d{3})*|\d+)\s*km/i;
+                const kmMatch = text.match(kmPattern);
+
+                if (kmMatch) {
+                    const numerosApenas = kmMatch[1].replace(/\./g, '');
+                    const kmValue = parseInt(numerosApenas);
+
+                    if (kmValue > 0 && kmValue < 1000000) {
+                        return kmValue;
+                    }
                 }
             }
         }
