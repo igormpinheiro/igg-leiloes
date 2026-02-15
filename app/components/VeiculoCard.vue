@@ -10,6 +10,7 @@
           </a>
         </h3>
         <p class="text-gray-600 text-sm">{{ veiculo.ano }} • {{ veiculo.quilometragem.toLocaleString('pt-BR') }} km</p>
+        <p v-if="veiculo.dataLeilao" class="text-gray-500 text-xs">Leilão: {{ formatarData(veiculo.dataLeilao) }}</p>
       </div>
       <!-- Edit button -->
       <button
@@ -98,6 +99,12 @@ const emit = defineEmits(['edit']);
 // Formatação de valores
 function formatarValor(valor: number): string {
   return valor.toLocaleString('pt-BR');
+}
+
+// Formatação de data
+function formatarData(data: Date | string): string {
+  const d = typeof data === 'string' ? new Date(data) : data;
+  return d.toLocaleDateString('pt-BR');
 }
 
 // Calcula a porcentagem do lance atual em relação ao valor de mercado

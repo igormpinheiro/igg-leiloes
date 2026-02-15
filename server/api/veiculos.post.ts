@@ -1,12 +1,28 @@
 // server/api/veiculos.post.ts
-import type { Veiculo } from '~/types/veiculo';
 import prisma from '../utils/prisma';
 
 export default defineEventHandler(async (event) => {
     try {
-        const veiculo = await readBody(event);
+        const body = await readBody(event);
 
-        console.log('Salvando:', veiculo);
+        // Se o parser retornou null, deletar o veículo do banco se existir
+        if (body.parserReturnedNull && body.urlOrigem) {
+            const existing = await prisma.veiculo.findUnique({
+                where: { urlOrigem: body.urlOrigem }
+            });
+
+            if (existing) {
+                await prisma.veiculo.delete({
+                    where: { urlOrigem: body.urlOrigem }
+                });
+                return { success: true, action: 'deleted' as const };
+            }
+
+            return { success: true, action: 'deleted' as const };
+        }
+
+        const veiculo = body;
+
         if (!veiculo || !veiculo.descricao || !veiculo.marca) {
             return createError({
                 statusCode: 400,
@@ -14,9 +30,14 @@ export default defineEventHandler(async (event) => {
             });
         }
 
-        // Salvar no banco de dados usando Prisma
-        const novoVeiculo : Veiculo = await prisma.veiculo.create({
-            data: {
+        const dataLeilao = veiculo.dataLeilao ? new Date(veiculo.dataLeilao) : new Date();
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        const isActive = dataLeilao >= hoje;
+
+        const result = await prisma.veiculo.upsert({
+            where: { urlOrigem: veiculo.urlOrigem },
+            create: {
                 descricao: veiculo.descricao,
                 marca: veiculo.marca,
                 ano: veiculo.ano,
@@ -26,16 +47,25 @@ export default defineEventHandler(async (event) => {
                 lanceAtual: veiculo.lanceAtual,
                 valorMercado: veiculo.valorMercado,
                 dataCaptura: new Date(veiculo.dataCaptura),
+                dataLeilao: dataLeilao,
                 urlOrigem: veiculo.urlOrigem,
-                active: true,
+                active: isActive,
                 leiloeiro: veiculo.leiloeiro
+            },
+            update: {
+                lanceAtual: veiculo.lanceAtual,
+                active: isActive
             }
         });
 
+        // Determinar se foi criado ou atualizado
+        const wasCreated = result.createdAt.getTime() === result.updatedAt.getTime()
+            || (Date.now() - result.createdAt.getTime()) < 1000;
+
         return {
             success: true,
-            message: 'Veículo salvo com sucesso',
-            id: novoVeiculo.id
+            action: wasCreated ? 'created' as const : 'updated' as const,
+            id: result.id
         };
 
     } catch (error: any) {

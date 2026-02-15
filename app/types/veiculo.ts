@@ -10,6 +10,7 @@ export interface Veiculo {
     lanceAtual: number;
     valorMercado: number;
     dataCaptura: Date;
+    dataLeilao?: Date;
     urlOrigem: string;
     active: boolean;
     leiloeiro?: string;

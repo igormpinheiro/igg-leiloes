@@ -6,6 +6,20 @@
     <div class="bg-white p-6 rounded-lg shadow mb-8">
       <h2 class="text-xl font-semibold mb-4">Adicionar Nova URL</h2>
 
+      <!-- Campo de Data do Leilão (compartilhado entre todos os modos) -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Data do Leilão *</label>
+        <input
+            v-model="dataLeilao"
+            type="date"
+            class="p-3 border rounded-md focus:ring focus:ring-blue-200 focus:outline-none w-64"
+            required
+        />
+        <p class="text-sm text-gray-500 mt-1">
+          Informe a data do leilão para todos os veículos extraídos
+        </p>
+      </div>
+
       <div class="mb-4">
         <div class="flex space-x-4 mb-4">
           <button
@@ -112,25 +126,22 @@
                     class="bg-green-600 text-white px-3 py-1 text-sm rounded hover:bg-green-700"
                     :disabled="isLoading || urlsListagem.length === 0"
                 >
-                  Processar Todas ({{ Math.min(urlsListagem.length, 10) }})
+                  Processar Todas ({{ urlsListagem.length }})
                 </button>
               </div>
             </div>
 
             <div class="max-h-60 overflow-y-auto bg-white border rounded p-2">
               <ul class="divide-y">
-                <li v-for="(url, index) in urlsListagem.slice(0, 10)" :key="index"
+                <li v-for="(u, index) in urlsListagem" :key="index"
                     class="py-2 flex justify-between items-center">
-                  <span class="text-sm truncate" style="max-width: 400px;">{{ url }}</span>
+                  <span class="text-sm truncate" style="max-width: 400px;">{{ u }}</span>
                   <button
-                      @click="processarUrlUnica(url)"
+                      @click="processarUrlUnica(u)"
                       class="text-blue-600 hover:text-blue-800 text-xs font-medium"
                   >
                     Processar
                   </button>
-                </li>
-                <li v-if="urlsListagem.length > 10" class="py-2 text-center text-sm text-gray-500">
-                  + {{ urlsListagem.length - 10 }} URLs adicionais (limitado a 10 para processamento)
                 </li>
               </ul>
             </div>
@@ -191,35 +202,103 @@
       </div>
     </div>
 
+    <!-- Progresso da Extração Sequencial -->
+    <div v-if="sequentialResults.length > 0 || isLoading && modoExtracao === 'sequencial'" class="bg-white rounded-lg shadow mb-8">
+      <div class="border-b p-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-semibold">Extração Sequencial</h2>
+            <p class="text-sm text-gray-500">
+              {{ sequentialStats.total }} lote(s) processado(s) —
+              {{ sequentialStats.created }} novo(s),
+              {{ sequentialStats.updated }} atualizado(s),
+              {{ sequentialStats.deleted }} descartado(s),
+              {{ sequentialStats.errors }} erro(s)
+            </p>
+          </div>
+          <button
+              v-if="isLoading"
+              @click="cancelarExtracao"
+              class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 focus:outline-none"
+          >
+            Cancelar
+          </button>
+        </div>
+
+        <!-- Barra de progresso -->
+        <div v-if="isLoading" class="mt-3">
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div
+                class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                :style="{ width: progressPercent + '%' }"
+            ></div>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">
+            {{ sequentialResults.length }} / {{ limiteVeiculos }} ({{ progressPercent }}%)
+          </p>
+        </div>
+      </div>
+
+      <div class="p-4 max-h-96 overflow-y-auto">
+        <ul class="divide-y">
+          <li v-for="(item, index) in sequentialResults" :key="index"
+              class="py-2 flex items-center justify-between">
+            <div class="flex items-center space-x-3 min-w-0">
+              <!-- Status icon -->
+              <span v-if="item.status === 'loading'" class="flex-shrink-0">
+                <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </span>
+              <span v-else-if="item.status === 'success'" class="flex-shrink-0 text-green-600 font-bold">OK</span>
+              <span v-else-if="item.status === 'deleted'" class="flex-shrink-0 text-yellow-600 font-bold">--</span>
+              <span v-else class="flex-shrink-0 text-red-600 font-bold">ERR</span>
+
+              <div class="min-w-0">
+                <p class="text-sm font-medium truncate">
+                  {{ item.descricao || item.url }}
+                </p>
+                <p v-if="item.error" class="text-xs text-red-500">{{ item.error }}</p>
+              </div>
+            </div>
+
+            <!-- Badge de ação -->
+            <span
+                v-if="item.action"
+                class="flex-shrink-0 ml-2 px-2 py-1 text-xs font-medium rounded"
+                :class="getActionBadgeClass(item.action)"
+            >
+              {{ getActionLabel(item.action) }}
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
     <!-- Resultado Individual do Scrapper -->
     <div v-if="resultadoScrapper" class="bg-white rounded-lg shadow mb-8">
       <div class="border-b p-4">
-        <h2 class="text-xl font-semibold">Resultado da Extração</h2>
-        <p class="text-sm text-gray-500">URL: {{ resultadoScrapper.urlOrigem }}</p>
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-xl font-semibold">Resultado da Extração</h2>
+            <p class="text-sm text-gray-500">URL: {{ resultadoScrapper.urlOrigem }}</p>
+          </div>
+          <!-- Badge de ação -->
+          <span
+              v-if="resultadoAction"
+              class="px-3 py-1 text-sm font-medium rounded"
+              :class="getActionBadgeClass(resultadoAction)"
+          >
+            {{ getActionLabel(resultadoAction) }}
+          </span>
+        </div>
       </div>
 
       <div class="p-4">
-        <!-- Card de Veículo -->
         <VeiculoCard :veiculo="resultadoScrapper"/>
 
-        <!-- Botões de Ação -->
-        <div class="mt-6 flex justify-end space-x-2">
-          <button
-              @click="salvarVeiculo"
-              class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 focus:outline-none focus:ring focus:ring-green-200"
-              :disabled="isLoading"
-          >
-            <span v-if="!isLoading">Salvar no Banco de Dados</span>
-            <span v-else class="flex items-center">
-              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
-                   viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Salvando...
-            </span>
-          </button>
+        <div class="mt-6 flex justify-end">
           <button
               @click="limparResultado"
               class="bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300 focus:outline-none focus:ring focus:ring-gray-200"
@@ -252,59 +331,47 @@
                 Score
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Ações
               </th>
             </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="(veiculo, index) in batchResults" :key="index" class="hover:bg-gray-50">
+            <tr v-for="(item, index) in batchResults" :key="index" class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-medium text-gray-900">{{ veiculo.descricao }}</div>
-                <div class="text-sm text-gray-500">{{ veiculo.marca }} | {{ veiculo.ano }}</div>
+                <div class="text-sm font-medium text-gray-900">{{ item.veiculo.descricao }}</div>
+                <div class="text-sm text-gray-500">{{ item.veiculo.marca }} | {{ item.veiculo.ano }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">R$ {{ formatarValor(veiculo.lanceAtual) }}</div>
+                <div class="text-sm text-gray-900">R$ {{ formatarValor(item.veiculo.lanceAtual) }}</div>
                 <div class="text-sm text-gray-500">
-                  {{ Math.round((veiculo.lanceAtual / veiculo.valorMercado) * 100) }}% do valor de mercado
+                  {{ Math.round((item.veiculo.lanceAtual / item.veiculo.valorMercado) * 100) }}% do valor de mercado
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                   <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full"
-                        :class="getScoreClass(getVeiculoScore(veiculo))">
-                    {{ getScoreIcon(getVeiculoScore(veiculo)) }} {{ getVeiculoScore(veiculo).toFixed(1) }}
+                        :class="getScoreClass(getVeiculoScore(item.veiculo))">
+                    {{ getScoreIcon(getVeiculoScore(item.veiculo)) }} {{ getVeiculoScore(item.veiculo).toFixed(1) }}
                   </span>
               </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span
+                    class="px-2 py-1 text-xs font-medium rounded"
+                    :class="getActionBadgeClass(item.action)"
+                >
+                  {{ getActionLabel(item.action) }}
+                </span>
+              </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button @click="visualizarVeiculo(veiculo)" class="text-blue-600 hover:text-blue-900 mr-3">
+                <button @click="visualizarVeiculo(item.veiculo, item.action)" class="text-blue-600 hover:text-blue-900">
                   Visualizar
-                </button>
-                <button @click="salvarVeiculoIndividual(veiculo)" class="text-green-600 hover:text-green-900">
-                  Salvar
                 </button>
               </td>
             </tr>
             </tbody>
           </table>
-        </div>
-
-        <!-- Botão para salvar todos os veículos -->
-        <div class="mt-4 flex justify-end">
-          <button
-              @click="salvarTodosVeiculos"
-              class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 focus:outline-none focus:ring focus:ring-green-200"
-              :disabled="isLoading"
-          >
-            <span v-if="!isLoading">Salvar Todos no Banco de Dados</span>
-            <span v-else class="flex items-center">
-              <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
-                   viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Salvando...
-            </span>
-          </button>
         </div>
       </div>
     </div>
@@ -322,8 +389,15 @@
                 <p class="font-medium truncate" style="max-width: 400px;">{{ item.url }}</p>
                 <p class="text-sm text-gray-500">{{ item.data }}</p>
               </div>
-              <div>
+              <div class="flex items-center space-x-2">
+                <span
+                    class="px-2 py-1 text-xs font-medium rounded"
+                    :class="getActionBadgeClass(item.action)"
+                >
+                  {{ getActionLabel(item.action) }}
+                </span>
                 <button
+                    v-if="item.resultado"
                     @click="carregarHistorico(index)"
                     class="text-blue-600 hover:text-blue-800 text-sm font-medium"
                 >
@@ -339,49 +413,96 @@
 </template>
 
 <script setup lang="ts">
-import {ref, reactive} from 'vue';
+import {ref, computed} from 'vue';
 import type {Veiculo} from '~/types/veiculo';
 import {scrapperService} from '~/services/scrapperService';
+import type {ExtractResult} from '~/services/scrapperService';
 import {VeiculoRanker} from '~/services/veiculoRankerService';
 
 // Estados
 const url = ref('');
 const urlListagem = ref('');
 const urlSequencial = ref('');
-const limiteVeiculos = ref(10);
+const dataLeilao = ref('');
+const limiteVeiculos = ref(500);
 const modoExtracao = ref('individual');
 const isLoading = ref(false);
+const cancelRequested = ref(false);
 const statusMessage = ref<{ text: string, type: 'success' | 'error' } | null>(null);
 const resultadoScrapper = ref<Veiculo | null>(null);
-const historico = ref<{ url: string, data: string, resultado: Veiculo }[]>([]);
+const resultadoAction = ref<string | null>(null);
+const historico = ref<{ url: string, data: string, resultado: Veiculo | null, action: string }[]>([]);
 const urlsListagem = ref<string[]>([]);
-const batchResults = ref<Veiculo[]>([]);
+const batchResults = ref<{ veiculo: Veiculo, action: string }[]>([]);
+
+// Estado da extração sequencial
+interface SequentialItem {
+  url: string;
+  status: 'loading' | 'success' | 'deleted' | 'error';
+  descricao?: string;
+  action?: string;
+  error?: string;
+}
+const sequentialResults = ref<SequentialItem[]>([]);
+
+const sequentialStats = computed(() => {
+  const items = sequentialResults.value;
+  return {
+    total: items.filter(i => i.status !== 'loading').length,
+    created: items.filter(i => i.action === 'created').length,
+    updated: items.filter(i => i.action === 'updated').length,
+    deleted: items.filter(i => i.status === 'deleted').length,
+    errors: items.filter(i => i.status === 'error').length
+  };
+});
+
+const progressPercent = computed(() => {
+  if (limiteVeiculos.value === 0) return 0;
+  return Math.min(100, Math.round((sequentialResults.value.length / limiteVeiculos.value) * 100));
+});
+
+// Validar data do leilão
+function validarDataLeilao(): boolean {
+  if (!dataLeilao.value) {
+    statusMessage.value = {
+      text: 'Informe a data do leilão antes de extrair.',
+      type: 'error'
+    };
+    return false;
+  }
+  return true;
+}
 
 // Função para iniciar o scrapper para uma URL individual
 async function iniciarScrapper() {
-  if (!url.value) return;
+  if (!url.value || !validarDataLeilao()) return;
 
   isLoading.value = true;
   statusMessage.value = null;
   resultadoScrapper.value = null;
+  resultadoAction.value = null;
 
   try {
-    // Utilizar o serviço de scrapper
+    const result = await scrapperService.executarScrapper(url.value, dataLeilao.value);
 
-    const novoVeiculo = await scrapperService.executarScrapper(url.value);
-
-    resultadoScrapper.value = novoVeiculo;
+    if (result.veiculo) {
+      resultadoScrapper.value = result.veiculo;
+      resultadoAction.value = result.action;
+    }
 
     // Adicionar ao histórico
     historico.value.unshift({
       url: url.value,
       data: new Date().toLocaleString('pt-BR'),
-      resultado: novoVeiculo
+      resultado: result.veiculo,
+      action: result.action
     });
 
     statusMessage.value = {
-      text: 'Dados extraídos com sucesso!',
-      type: 'success'
+      text: result.veiculo
+          ? `Dados extraídos e salvos com sucesso! (${getActionLabel(result.action)})`
+          : 'Lote cancelado/descartado.',
+      type: result.veiculo ? 'success' : 'error'
     };
   } catch (error: any) {
     statusMessage.value = {
@@ -395,14 +516,13 @@ async function iniciarScrapper() {
 
 // Extrair URLs de uma listagem
 async function extrairListagem() {
-  if (!urlListagem.value) return;
+  if (!urlListagem.value || !validarDataLeilao()) return;
 
   isLoading.value = true;
   statusMessage.value = null;
   urlsListagem.value = [];
 
   try {
-    // Chamar a API para extrair URLs da listagem
     const response = await fetch('/api/scrapper/extract-listing', {
       method: 'POST',
       headers: {
@@ -439,71 +559,62 @@ async function extrairListagem() {
   }
 }
 
-// Iniciar extração sequencial
+// Iniciar extração sequencial (client-side loop usando nextUrl)
 async function iniciarExtracaoSequencial() {
-  if (!urlSequencial.value) return;
+  if (!urlSequencial.value || !validarDataLeilao()) return;
 
   isLoading.value = true;
+  cancelRequested.value = false;
   statusMessage.value = null;
-  batchResults.value = [];
+  sequentialResults.value = [];
+
+  let currentUrl: string | null = urlSequencial.value;
+  let count = 0;
 
   try {
-    // Chamar a API para extração sequencial
-    const response = await fetch('/api/scrapper/extract-sequential', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: urlSequencial.value,
-        maxVeiculos: limiteVeiculos.value
-      }),
-    });
+    while (currentUrl && count < limiteVeiculos.value && !cancelRequested.value) {
+      // Adicionar item como loading
+      const item: SequentialItem = {
+        url: currentUrl,
+        status: 'loading'
+      };
+      sequentialResults.value.push(item);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.statusMessage || 'Erro ao realizar extração sequencial');
+      try {
+        const result = await scrapperService.executarScrapper(currentUrl, dataLeilao.value);
+
+        if (result.veiculo) {
+          item.status = 'success';
+          item.descricao = result.veiculo.descricao;
+          item.action = result.action;
+        } else {
+          item.status = 'deleted';
+          item.descricao = 'Lote cancelado/descartado';
+          item.action = 'deleted';
+        }
+
+        currentUrl = result.nextUrl;
+      } catch (error: any) {
+        item.status = 'error';
+        item.error = error.message || 'Erro desconhecido';
+        currentUrl = null;
+      }
+
+      count++;
+
+      // Pausa entre requisições
+      if (currentUrl && !cancelRequested.value) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
 
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.message || 'Erro ao realizar extração sequencial');
-    }
-
-    // Processar resultados
-    const veiculosExtraidos = data.results
-        .filter((result: any) => result.success)
-        .map((result: any) => {
-          const veiculo = result.data;
-          veiculo.dataCaptura = new Date(veiculo.dataCaptura);
-          return veiculo;
-        });
-
-    batchResults.value = veiculosExtraidos;
-
-    // Adicionar ao histórico
-    for (const veiculo of veiculosExtraidos) {
-      historico.value.unshift({
-        url: veiculo.urlOrigem,
-        data: new Date().toLocaleString('pt-BR'),
-        resultado: veiculo
-      });
-    }
-
-    const sucessos = data.results.filter((r: any) => r.success).length;
-    const falhas = data.results.length - sucessos;
-    const completo = data.completed ? 'completa' : 'parcial';
-
+    const stats = sequentialStats.value;
     statusMessage.value = {
-      text: `Extração sequencial ${completo}: ${sucessos} sucesso(s), ${falhas} falha(s). ${veiculosExtraidos.length} veículo(s) extraído(s).`,
+      text: cancelRequested.value
+          ? `Extração cancelada. ${stats.total} lote(s) processado(s): ${stats.created} novo(s), ${stats.updated} atualizado(s), ${stats.deleted} descartado(s), ${stats.errors} erro(s).`
+          : `Extração concluída. ${stats.total} lote(s) processado(s): ${stats.created} novo(s), ${stats.updated} atualizado(s), ${stats.deleted} descartado(s), ${stats.errors} erro(s).`,
       type: 'success'
     };
-
-    // Se apenas um veículo foi extraído, exibi-lo
-    if (veiculosExtraidos.length === 1) {
-      resultadoScrapper.value = veiculosExtraidos[0];
-    }
 
   } catch (error: any) {
     statusMessage.value = {
@@ -512,78 +623,103 @@ async function iniciarExtracaoSequencial() {
     };
   } finally {
     isLoading.value = false;
+    cancelRequested.value = false;
   }
+}
+
+function cancelarExtracao() {
+  cancelRequested.value = true;
 }
 
 // Processar uma URL específica da listagem
 async function processarUrlUnica(urlParaProcessar: string) {
-  url.value = urlParaProcessar;
-  await iniciarScrapper();
+  if (!validarDataLeilao()) return;
+
+  isLoading.value = true;
+  statusMessage.value = null;
+
+  try {
+    const result = await scrapperService.executarScrapper(urlParaProcessar, dataLeilao.value);
+
+    if (result.veiculo) {
+      resultadoScrapper.value = result.veiculo;
+      resultadoAction.value = result.action;
+
+      statusMessage.value = {
+        text: `Veículo extraído e salvo com sucesso! (${getActionLabel(result.action)})`,
+        type: 'success'
+      };
+    } else {
+      statusMessage.value = {
+        text: 'Lote cancelado/descartado.',
+        type: 'error'
+      };
+    }
+
+    historico.value.unshift({
+      url: urlParaProcessar,
+      data: new Date().toLocaleString('pt-BR'),
+      resultado: result.veiculo,
+      action: result.action
+    });
+  } catch (error: any) {
+    statusMessage.value = {
+      text: error.message || 'Erro ao processar URL',
+      type: 'error'
+    };
+  } finally {
+    isLoading.value = false;
+  }
 }
 
-// Processar todas as URLs em lote
+// Processar todas as URLs em lote (sequencialmente com auto-save)
 async function processarUrlsEmLote() {
-  if (urlsListagem.value.length === 0) return;
+  if (urlsListagem.value.length === 0 || !validarDataLeilao()) return;
 
   isLoading.value = true;
   statusMessage.value = null;
   batchResults.value = [];
 
   try {
-    // Limitar o número de URLs para evitar sobrecarga
-    const urlsParaProcessar = urlsListagem.value.slice(0, 10);
+    let sucessos = 0;
+    let falhas = 0;
 
-    // Chamar a API para processar URLs em lote
-    const response = await fetch('/api/scrapper/batch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({urls: urlsParaProcessar}),
-    });
+    for (const urlItem of urlsListagem.value) {
+      try {
+        const result = await scrapperService.executarScrapper(urlItem, dataLeilao.value);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.statusMessage || 'Erro ao processar URLs em lote');
-    }
+        if (result.veiculo) {
+          batchResults.value.push({ veiculo: result.veiculo, action: result.action });
+          sucessos++;
+        } else {
+          falhas++;
+        }
 
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.message || 'Erro ao processar URLs em lote');
-    }
-
-    // Processar resultados
-    const veiculosExtraidos = data.results
-        .filter((result: any) => result.success)
-        .map((result: any) => {
-          const veiculo = result.data;
-          veiculo.dataCaptura = new Date(veiculo.dataCaptura);
-          return veiculo;
+        historico.value.unshift({
+          url: urlItem,
+          data: new Date().toLocaleString('pt-BR'),
+          resultado: result.veiculo,
+          action: result.action
         });
 
-    batchResults.value = veiculosExtraidos;
-
-    // Adicionar ao histórico
-    for (const veiculo of veiculosExtraidos) {
-      historico.value.unshift({
-        url: veiculo.urlOrigem,
-        data: new Date().toLocaleString('pt-BR'),
-        resultado: veiculo
-      });
+        // Pausa entre requisições
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        falhas++;
+      }
     }
 
-    const sucessos = data.results.filter((r: any) => r.success).length;
-    const falhas = data.results.length - sucessos;
-
     statusMessage.value = {
-      text: `Processamento em lote concluído: ${sucessos} sucesso(s), ${falhas} falha(s). ${veiculosExtraidos.length} veículo(s) extraído(s).`,
+      text: `Processamento em lote concluído: ${sucessos} sucesso(s), ${falhas} falha(s).`,
       type: 'success'
     };
 
-    // Se apenas um veículo foi extraído, exibi-lo
-    if (veiculosExtraidos.length === 1) {
-      resultadoScrapper.value = veiculosExtraidos[0];
+    if (batchResults.value.length === 1) {
+      const first = batchResults.value[0];
+      if (first) {
+        resultadoScrapper.value = first.veiculo;
+        resultadoAction.value = first.action;
+      }
     }
 
   } catch (error: any) {
@@ -597,113 +733,13 @@ async function processarUrlsEmLote() {
 }
 
 // Visualizar um veículo específico do lote
-function visualizarVeiculo(veiculo: Veiculo) {
+function visualizarVeiculo(veiculo: Veiculo, action?: string) {
   resultadoScrapper.value = veiculo;
+  resultadoAction.value = action || null;
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
-// Salvar um veículo individual do lote
-async function salvarVeiculoIndividual(veiculo: Veiculo) {
-  isLoading.value = true;
-  statusMessage.value = null;
-
-  try {
-    // Chamar a API para salvar o veículo
-    const response = await fetch('/api/veiculos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(veiculo),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.statusMessage || 'Erro ao salvar veículo no banco de dados');
-    }
-
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.message || 'Erro ao salvar veículo no banco de dados');
-    }
-
-    statusMessage.value = {
-      text: `Veículo "${veiculo.descricao}" salvo com sucesso no banco de dados!`,
-      type: 'success'
-    };
-
-    // Remover o veículo da lista de resultados
-    batchResults.value = batchResults.value.filter(v => v !== veiculo);
-
-  } catch (error: any) {
-    statusMessage.value = {
-      text: error.message || 'Erro ao salvar veículo no banco de dados',
-      type: 'error'
-    };
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-// Salvar todos os veículos do lote
-async function salvarTodosVeiculos() {
-  if (batchResults.value.length === 0) return;
-
-  isLoading.value = true;
-  statusMessage.value = null;
-
-  try {
-    const totalVeiculos = batchResults.value.length;
-    let sucessos = 0;
-    let falhas = 0;
-
-    // Processar cada veículo sequencialmente
-    for (const veiculo of batchResults.value) {
-      try {
-        const response = await fetch('/api/veiculos', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(veiculo),
-        });
-
-        if (response.ok) {
-          sucessos++;
-        } else {
-          falhas++;
-        }
-
-        // Pequena pausa para não sobrecarregar o servidor
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-      } catch (error) {
-        falhas++;
-      }
-    }
-
-    statusMessage.value = {
-      text: `Salvamento em lote concluído: ${sucessos} sucesso(s), ${falhas} falha(s) de um total de ${totalVeiculos} veículo(s).`,
-      type: 'success'
-    };
-
-    // Limpar a lista de resultados se todos foram salvos com sucesso
-    if (sucessos === totalVeiculos) {
-      batchResults.value = [];
-    }
-
-  } catch (error: any) {
-    statusMessage.value = {
-      text: error.message || 'Erro ao salvar veículos em lote',
-      type: 'error'
-    };
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-// Função auxiliar para determinar a classe CSS do score
+// Funções auxiliares de score
 function getScoreClass(score: number): string {
   if (score >= 8.5) return 'bg-green-100 text-green-800';
   if (score >= 7.0) return 'bg-blue-100 text-blue-800';
@@ -712,68 +748,43 @@ function getScoreClass(score: number): string {
   return 'bg-red-100 text-red-800';
 }
 
-// Função para calcular o score de um veículo
 function getVeiculoScore(veiculo: Veiculo): number {
   return VeiculoRanker.calcularScore(veiculo);
 }
 
-// Função para obter o ícone baseado no score
 function getScoreIcon(score: number): string {
-  if (score >= 8.5) return '🏆'; // Excelente
-  if (score >= 7.0) return '🥈'; // Muito Bom
-  if (score >= 5.0) return '🥉'; // Bom
-  if (score >= 3.0) return '⚠️'; // Regular
-  return '❌'; // Ruim
+  if (score >= 8.5) return '🏆';
+  if (score >= 7.0) return '🥈';
+  if (score >= 5.0) return '🥉';
+  if (score >= 3.0) return '⚠️';
+  return '❌';
 }
 
-// Salvar veículo no banco de dados (para resultado individual)
-async function salvarVeiculo() {
-  if (!resultadoScrapper.value) return;
+// Funções de ação (badge)
+function getActionBadgeClass(action: string): string {
+  switch (action) {
+    case 'created': return 'bg-green-100 text-green-800';
+    case 'updated': return 'bg-blue-100 text-blue-800';
+    case 'deleted': return 'bg-yellow-100 text-yellow-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+}
 
-  statusMessage.value = null;
-  isLoading.value = true;
-
-  try {
-    // Chamar a API para salvar o veículo
-    const response = await fetch('/api/veiculos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(resultadoScrapper.value),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.statusMessage || 'Erro ao salvar veículo no banco de dados');
-    }
-
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.message || 'Erro ao salvar veículo no banco de dados');
-    }
-
-    statusMessage.value = {
-      text: 'Veículo salvo com sucesso no banco de dados!',
-      type: 'success'
-    };
-  } catch (error: any) {
-    statusMessage.value = {
-      text: error.message || 'Erro ao salvar veículo no banco de dados',
-      type: 'error'
-    };
-  } finally {
-    isLoading.value = false;
+function getActionLabel(action: string): string {
+  switch (action) {
+    case 'created': return 'Novo';
+    case 'updated': return 'Atualizado';
+    case 'deleted': return 'Descartado';
+    default: return action;
   }
 }
 
 // Carregar resultado do histórico
 function carregarHistorico(index: number) {
   const item = historico.value[index];
-  if (item) {
-    url.value = item.url;
+  if (item && item.resultado) {
     resultadoScrapper.value = item.resultado;
+    resultadoAction.value = item.action;
     statusMessage.value = null;
   }
 }
@@ -781,9 +792,11 @@ function carregarHistorico(index: number) {
 // Limpar resultado
 function limparResultado() {
   resultadoScrapper.value = null;
+  resultadoAction.value = null;
   statusMessage.value = null;
   url.value = '';
   batchResults.value = [];
+  sequentialResults.value = [];
 }
 
 // Formatar valores monetários

@@ -22,9 +22,10 @@ model Veiculo {
   lanceAtual    Float
   valorMercado  Float
   dataCaptura   DateTime
-  urlOrigem     String
+  dataLeilao    DateTime @default(now())
+  urlOrigem     String   @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-  active        Boolean @default(false)
+  active        Boolean  @default(false)
   leiloeiro     String
 }
