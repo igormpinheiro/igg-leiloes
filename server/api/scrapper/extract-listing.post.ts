@@ -1,9 +1,11 @@
 // server/api/scrapper/extract-listing.post.ts
 import { parse } from 'node-html-parser';
+import { LeiloListingParser } from '../../utils/leilo-listing-parser';
+import { LeiloPuppeteerParser } from '../../utils/leilo-puppeteer-parser';
 
 export default defineEventHandler(async (event) => {
     try {
-        const { url } = await readBody(event);
+        const { url, fullExtraction = true } = await readBody(event);
 
         if (!url) {
             return createError({
@@ -13,12 +15,57 @@ export default defineEventHandler(async (event) => {
         }
 
         // Verificar se a URL é de um site suportado
-        if (!url.includes('parquedosleiloes.com.br')) {
+        const isParqueDosLeiloes = url.includes('parquedosleiloes.com.br');
+        const isLeilo = url.includes('leilo.com.br');
+
+        if (!isParqueDosLeiloes && !isLeilo) {
             return createError({
                 statusCode: 400,
-                statusMessage: 'URL não suportada. Atualmente só suportamos o site Parque dos Leilões.'
+                statusMessage: 'URL não suportada. Atualmente suportamos: Parque dos Leilões e Leilo.'
             });
         }
+
+        // Processar Leilo com modo rápido ou completo
+        if (isLeilo) {
+            try {
+                if (fullExtraction) {
+                    // Modo completo: Puppeteer com scroll infinito (100% dos lotes, ~20s)
+                    console.log('[Leilo] Usando modo completo (Puppeteer)...');
+                    const data = await LeiloPuppeteerParser.extractFullListing(url);
+
+                    return {
+                        success: true,
+                        url,
+                        total: data.total,
+                        loteUrls: data.loteUrls,
+                        dataLeilao: data.dataLeilao,
+                        method: 'puppeteer'
+                    };
+                } else {
+                    // Modo rápido: HTML scraping (não funciona para Leilo - retorna dados de fallback)
+                    console.log('[Leilo] Modo rápido não suportado para este site (SPA). Use fullExtraction=true.');
+                    const data = await LeiloListingParser.extractLoteUrls(url);
+
+                    return {
+                        success: true,
+                        url,
+                        total: 0,
+                        loteUrls: [],
+                        dataLeilao: data.dataLeilao,
+                        method: 'html-scraping',
+                        warning: 'Leilo.com.br é uma SPA que carrega lotes dinamicamente. HTML scraping não funciona. Use fullExtraction=true (Puppeteer) para extrair os lotes.'
+                    };
+                }
+            } catch (error: any) {
+                console.error('Erro ao processar listagem do Leilo:', error);
+                return createError({
+                    statusCode: 500,
+                    statusMessage: `Erro ao processar listagem do Leilo: ${error.message}`
+                });
+            }
+        }
+
+        // Processar Parque dos Leilões (lógica original)
 
         // Fazer a requisição para a URL da listagem
         console.log(`Fazendo requisição para listagem: ${url}`);

@@ -7,7 +7,8 @@
       <h2 class="text-xl font-semibold mb-4">Adicionar Nova URL</h2>
 
       <!-- Campo de Data do Leilão (compartilhado entre todos os modos) -->
-      <div class="mb-4">
+      <!-- Mostrar apenas se NÃO for URL do Leilo em modo listagem -->
+      <div v-if="!isLeiloListagem" class="mb-4">
         <label class="block text-sm font-medium text-gray-700 mb-2">Data do Leilão *</label>
         <input
             v-model="dataLeilao"
@@ -17,6 +18,13 @@
         />
         <p class="text-sm text-gray-500 mt-1">
           Informe a data do leilão para todos os veículos extraídos
+        </p>
+      </div>
+
+      <!-- Aviso quando for Leilo em modo listagem -->
+      <div v-else class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+        <p class="text-sm text-blue-700">
+          ℹ️ A data do leilão será extraída automaticamente da listagem
         </p>
       </div>
 
@@ -82,6 +90,27 @@
         </div>
 
         <div v-if="modoExtracao === 'listagem'">
+          <!-- Opção de extração completa (apenas para Leilo) -->
+          <div v-if="urlListagem.includes('leilo.com.br')" class="mb-4 p-4 bg-gray-50 rounded border">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Modo de Extração</label>
+            <div class="space-y-2">
+              <label class="flex items-center cursor-pointer">
+                <input type="radio" v-model="fullExtraction" :value="false" class="mr-2" />
+                <div>
+                  <span class="text-sm font-medium">Rápido</span>
+                  <span class="text-sm text-gray-500 ml-2">~60% dos lotes (2 segundos)</span>
+                </div>
+              </label>
+              <label class="flex items-center cursor-pointer">
+                <input type="radio" v-model="fullExtraction" :value="true" class="mr-2" checked />
+                <div>
+                  <span class="text-sm font-semibold text-blue-700">Completo ⭐ Recomendado</span>
+                  <span class="text-sm text-gray-500 ml-2">100% dos lotes (~20 segundos)</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <form @submit.prevent="extrairListagem">
             <div class="mb-4">
               <label class="block text-sm font-medium text-gray-700 mb-2">URL da Listagem</label>
@@ -428,6 +457,8 @@ const limiteVeiculos = ref(500);
 const modoExtracao = ref('individual');
 const isLoading = ref(false);
 const cancelRequested = ref(false);
+const fullExtraction = ref(true); // Padrão: extração completa
+const dataLeilaoExtraida = ref<string | null>(null); // Data extraída da API
 const statusMessage = ref<{ text: string, type: 'success' | 'error' } | null>(null);
 const resultadoScrapper = ref<Veiculo | null>(null);
 const resultadoAction = ref<string | null>(null);
@@ -461,8 +492,18 @@ const progressPercent = computed(() => {
   return Math.min(100, Math.round((sequentialResults.value.length / limiteVeiculos.value) * 100));
 });
 
+// Computed: verifica se é Leilo em modo listagem (para extração automática de data)
+const isLeiloListagem = computed(() => {
+  return modoExtracao.value === 'listagem' && urlListagem.value.includes('leilo.com.br');
+});
+
 // Validar data do leilão
 function validarDataLeilao(): boolean {
+  // Para Leilo em modo listagem, a data será extraída automaticamente
+  if (isLeiloListagem.value) {
+    return true;
+  }
+
   if (!dataLeilao.value) {
     statusMessage.value = {
       text: 'Informe a data do leilão antes de extrair.',
@@ -519,38 +560,48 @@ async function extrairListagem() {
   if (!urlListagem.value || !validarDataLeilao()) return;
 
   isLoading.value = true;
-  statusMessage.value = null;
   urlsListagem.value = [];
+  statusMessage.value = {
+    text: fullExtraction.value && isLeiloListagem.value
+        ? 'Extraindo listagem completa (pode levar ~20s)...'
+        : 'Extraindo listagem...',
+    type: 'success'
+  };
 
   try {
-    const response = await fetch('/api/scrapper/extract-listing', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({url: urlListagem.value}),
-    });
+    const result = await scrapperService.extrairListagem(
+        urlListagem.value,
+        fullExtraction.value
+    );
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.statusMessage || 'Erro ao extrair URLs da listagem');
+    // Salvar data extraída se for Leilo
+    if (isLeiloListagem.value && result.dataLeilao) {
+      dataLeilaoExtraida.value = result.dataLeilao;
+      // Converter ISO para formato date input (YYYY-MM-DD)
+      dataLeilao.value = result.dataLeilao.split('T')[0];
     }
 
-    const data = await response.json();
+    urlsListagem.value = result.loteUrls;
 
-    if (!data.success) {
-      throw new Error(data.message || 'Erro ao extrair URLs da listagem');
+    let message = `✓ ${result.total} lotes encontrados`;
+    if (result.method) {
+      message += ` (${result.method})`;
     }
-
-    urlsListagem.value = data.loteUrls || [];
+    if (result.dataLeilao) {
+      const dataFormatada = new Date(result.dataLeilao).toLocaleString('pt-BR');
+      message += `\n📅 Data do leilão: ${dataFormatada}`;
+    }
+    if (result.warning) {
+      message += `\n⚠️ ${result.warning}`;
+    }
 
     statusMessage.value = {
-      text: `Extraídas ${urlsListagem.value.length} URLs de lotes. Você pode processá-las individualmente ou em lote.`,
+      text: message,
       type: 'success'
     };
   } catch (error: any) {
     statusMessage.value = {
-      text: error.message || 'Erro ao extrair URLs da listagem',
+      text: `Erro: ${error.message}`,
       type: 'error'
     };
     urlsListagem.value = [];
