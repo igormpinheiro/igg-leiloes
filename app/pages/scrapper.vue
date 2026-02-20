@@ -325,7 +325,7 @@
       </div>
 
       <div class="p-4">
-        <VeiculoCard :veiculo="resultadoScrapper"/>
+        <VeiculoCard :veiculo="resultadoScrapper" @refresh="atualizarResultadoScrapper" />
 
         <div class="mt-6 flex justify-end">
           <button
@@ -788,6 +788,18 @@ function visualizarVeiculo(veiculo: Veiculo, action?: string) {
   resultadoScrapper.value = veiculo;
   resultadoAction.value = action || null;
   window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function atualizarResultadoScrapper(veiculoAtualizado: Veiculo) {
+  if (!resultadoScrapper.value) {
+    resultadoScrapper.value = veiculoAtualizado;
+    return;
+  }
+
+  resultadoScrapper.value = {
+    ...resultadoScrapper.value,
+    ...veiculoAtualizado
+  };
 }
 
 // Funções auxiliares de score

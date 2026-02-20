@@ -41,14 +41,28 @@
               <span class="text-gray-500">Capturado em {{ new Date(veiculo.dataCaptura).toLocaleString('pt-BR') }}</span>
             </div>
 
-            <a
-                v-if="veiculo.urlOrigem"
-                :href="veiculo.urlOrigem"
-                target="_blank"
-                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-            >
-              Ver no site original
-            </a>
+            <div class="flex items-center gap-2">
+              <button
+                  @click="atualizarVeiculo"
+                  class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 disabled:opacity-50"
+                  :disabled="isRefreshing"
+                  title="Atualizar lote"
+              >
+                <Icon
+                    :name="isRefreshing ? 'mdi:loading' : 'mdi:refresh'"
+                    class="text-lg"
+                    :class="{ 'animate-spin': isRefreshing }"
+                />
+              </button>
+              <a
+                  v-if="veiculo.urlOrigem"
+                  :href="veiculo.urlOrigem"
+                  target="_blank"
+                  class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              >
+                Ver no site original
+              </a>
+            </div>
           </div>
 
           <!-- Detalhes do veículo -->
@@ -148,6 +162,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { VeiculoRanker } from '~/services/veiculoRankerService';
+import { scrapperService } from '~/services/scrapperService';
 
 const route = useRoute();
 const id = computed(() => route.params.id);
@@ -170,6 +185,7 @@ const { data: response, pending, error, refresh } = await useFetch(`/api/veiculo
 });
 
 const veiculo = computed(() => response.value);
+const isRefreshing = ref(false);
 
 // Cálculo do lucro estimado
 const calcularLucroEstimado = computed(() => {
@@ -224,5 +240,31 @@ function getLucroClass(lucro) {
   if (lucro >= 5000) return 'text-blue-600';
   if (lucro >= 0) return 'text-yellow-600';
   return 'text-red-600';
+}
+
+async function atualizarVeiculo() {
+  if (!veiculo.value?.urlOrigem || isRefreshing.value) {
+    return;
+  }
+
+  try {
+    isRefreshing.value = true;
+    const dataLeilao = veiculo.value.dataLeilao
+        ? new Date(veiculo.value.dataLeilao).toISOString()
+        : undefined;
+    const result = await scrapperService.executarScrapper(veiculo.value.urlOrigem, dataLeilao);
+
+    if (!result.veiculo) {
+      alert('Lote cancelado/descartado.');
+      return;
+    }
+
+    await refresh();
+  } catch (error) {
+    console.error('Erro ao atualizar lote:', error);
+    alert('Erro ao atualizar lote. Verifique os logs.');
+  } finally {
+    isRefreshing.value = false;
+  }
 }
 </script>

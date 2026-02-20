@@ -12,14 +12,29 @@
         <p class="text-gray-600 text-sm">{{ veiculo.ano }} • {{ veiculo.quilometragem.toLocaleString('pt-BR') }} km</p>
         <p v-if="veiculo.dataLeilao" class="text-gray-500 text-xs">Leilão: {{ formatarData(veiculo.dataLeilao) }}</p>
       </div>
-      <!-- Edit button -->
-      <button
-          @click="editarVeiculo"
-          class="p-2 rounded-full hover:bg-gray-100"
-          title="Editar veículo"
-      >
-        <Icon name="mdi:pencil" class="text-blue-600 text-lg" />
-      </button>
+      <div class="flex items-center gap-2">
+        <!-- Refresh button -->
+        <button
+            @click="atualizarVeiculo"
+            class="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50"
+            :disabled="isRefreshing"
+            title="Atualizar lote"
+        >
+          <Icon
+              :name="isRefreshing ? 'mdi:loading' : 'mdi:refresh'"
+              class="text-emerald-600 text-lg"
+              :class="{ 'animate-spin': isRefreshing }"
+          />
+        </button>
+        <!-- Edit button -->
+        <button
+            @click="editarVeiculo"
+            class="p-2 rounded-full hover:bg-gray-100"
+            title="Editar veículo"
+        >
+          <Icon name="mdi:pencil" class="text-blue-600 text-lg" />
+        </button>
+      </div>
     </div>
 
     <!-- Card body -->
@@ -86,15 +101,17 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue';
+import { ref, defineProps, defineEmits } from 'vue';
 import type { Veiculo } from '~/types/veiculo';
 import { VeiculoRanker } from '~/services/veiculoRankerService';
+import { scrapperService } from '~/services/scrapperService';
 
 const props = defineProps<{
   veiculo: Veiculo;
 }>();
 
-const emit = defineEmits(['edit']);
+const emit = defineEmits(['edit', 'refresh']);
+const isRefreshing = ref(false);
 
 // Formatação de valores
 function formatarValor(valor: number): string {
@@ -149,5 +166,31 @@ function getScore(): number {
 // Emitir evento para editar o veículo
 function editarVeiculo() {
   emit('edit', props.veiculo);
+}
+
+async function atualizarVeiculo() {
+  if (!props.veiculo.urlOrigem || isRefreshing.value) {
+    return;
+  }
+
+  try {
+    isRefreshing.value = true;
+    const dataLeilao = props.veiculo.dataLeilao
+        ? new Date(props.veiculo.dataLeilao).toISOString()
+        : undefined;
+    const result = await scrapperService.executarScrapper(props.veiculo.urlOrigem, dataLeilao);
+
+    if (!result.veiculo) {
+      alert('Lote cancelado/descartado.');
+      return;
+    }
+
+    emit('refresh', result.veiculo);
+  } catch (error) {
+    console.error('Erro ao atualizar lote:', error);
+    alert('Erro ao atualizar lote. Verifique os logs.');
+  } finally {
+    isRefreshing.value = false;
+  }
 }
 </script>

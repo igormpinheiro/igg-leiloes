@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
             };
         }
 
-        // Auto-save: upsert no banco
+        // Auto-save: salvar no banco
         const dataLeilaoDate = dataLeilao ? new Date(dataLeilao) : new Date();
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
@@ -105,32 +105,56 @@ export default defineEventHandler(async (event) => {
 
         veiculo.dataLeilao = dataLeilaoDate;
 
-        const result = await prisma.veiculo.upsert({
-            where: { urlOrigem: veiculo.urlOrigem },
-            create: {
-                descricao: veiculo.descricao,
-                marca: veiculo.marca,
-                ano: veiculo.ano,
-                quilometragem: veiculo.quilometragem,
-                sinistro: veiculo.sinistro,
-                lanceInicial: veiculo.lanceInicial,
-                lanceAtual: veiculo.lanceAtual,
-                valorMercado: veiculo.valorMercado,
-                dataCaptura: new Date(veiculo.dataCaptura),
-                dataLeilao: dataLeilaoDate,
-                urlOrigem: veiculo.urlOrigem,
-                active: isActive,
-                leiloeiro: veiculo.leiloeiro || 'Desconhecido'
-            },
-            update: {
-                lanceAtual: veiculo.lanceAtual,
-                active: isActive
-            }
+        const existing = await prisma.veiculo.findUnique({
+            where: { urlOrigem: veiculo.urlOrigem }
         });
 
-        const wasCreated = result.createdAt.getTime() === result.updatedAt.getTime()
-            || (Date.now() - result.createdAt.getTime()) < 1000;
-        const action = wasCreated ? 'created' : 'updated';
+        const isMissingText = (value: string | null | undefined) => !value || value.trim() === '';
+        const isMissingNumber = (value: number | null | undefined) => value === null || value === undefined || value === 0;
+        const isMissingBoolean = (value: boolean | null | undefined) => value === null || value === undefined;
+
+        const updateData: Partial<Veiculo> & { active: boolean; lanceAtual: number } = {
+            lanceAtual: veiculo.lanceAtual,
+            active: isActive
+        };
+
+        if (existing) {
+            if (isMissingText(existing.descricao)) updateData.descricao = veiculo.descricao;
+            if (isMissingText(existing.marca)) updateData.marca = veiculo.marca;
+            if (isMissingText(existing.ano)) updateData.ano = veiculo.ano;
+            if (isMissingNumber(existing.quilometragem)) updateData.quilometragem = veiculo.quilometragem;
+            if (isMissingBoolean(existing.sinistro)) updateData.sinistro = veiculo.sinistro;
+            if (isMissingNumber(existing.lanceInicial)) updateData.lanceInicial = veiculo.lanceInicial;
+            if (isMissingNumber(existing.valorMercado)) updateData.valorMercado = veiculo.valorMercado;
+            if (!existing.dataLeilao) updateData.dataLeilao = dataLeilaoDate;
+            if (!existing.dataCaptura) updateData.dataCaptura = new Date(veiculo.dataCaptura);
+            if (isMissingText(existing.leiloeiro)) updateData.leiloeiro = veiculo.leiloeiro || 'Desconhecido';
+        }
+
+        const result = existing
+            ? await prisma.veiculo.update({
+                where: { urlOrigem: veiculo.urlOrigem },
+                data: updateData
+            })
+            : await prisma.veiculo.create({
+                data: {
+                    descricao: veiculo.descricao,
+                    marca: veiculo.marca,
+                    ano: veiculo.ano,
+                    quilometragem: veiculo.quilometragem,
+                    sinistro: veiculo.sinistro,
+                    lanceInicial: veiculo.lanceInicial,
+                    lanceAtual: veiculo.lanceAtual,
+                    valorMercado: veiculo.valorMercado,
+                    dataCaptura: new Date(veiculo.dataCaptura),
+                    dataLeilao: dataLeilaoDate,
+                    urlOrigem: veiculo.urlOrigem,
+                    active: isActive,
+                    leiloeiro: veiculo.leiloeiro || 'Desconhecido'
+                }
+            });
+
+        const action = existing ? 'updated' : 'created';
 
         console.log(`Veículo ${action}: ${veiculo.descricao}`);
 

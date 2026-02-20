@@ -187,7 +187,11 @@
         <!-- Modo de visualização Cards -->
         <div v-else-if="modoVisualizacao === 'cards'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
           <div v-for="veiculo in veiculosFiltrados" :key="veiculo.id" class="bg-white rounded-lg shadow overflow-hidden relative">
-            <VeiculoCard :veiculo="veiculo" @edit="abrirModalEditar" />
+            <VeiculoCard
+                :veiculo="veiculo"
+                @edit="abrirModalEditar"
+                @refresh="atualizarVeiculoDaLista"
+            />
           </div>
         </div>
 
@@ -328,6 +332,18 @@
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <button
+                    @click="atualizarVeiculo(veiculo)"
+                    class="text-emerald-600 hover:text-emerald-800 mr-2 disabled:opacity-50"
+                    :disabled="refreshingId === veiculo.id"
+                    title="Atualizar lote"
+                >
+                  <Icon
+                      :name="refreshingId === veiculo.id ? 'mdi:loading' : 'mdi:refresh'"
+                      class="text-lg"
+                      :class="{ 'animate-spin': refreshingId === veiculo.id }"
+                  />
+                </button>
+                <button
                     @click="abrirModalEditar(veiculo)"
                     class="text-blue-600 hover:text-blue-800 mr-2"
                     title="Editar veículo"
@@ -349,6 +365,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue';
 import type { Veiculo } from '~/types/veiculo';
 import { VeiculoRanker } from '~/services/veiculoRankerService';
 import VeiculoEditModal from "~/components/VeiculoEditModal.vue";
+import { scrapperService } from '~/services/scrapperService';
 
 // Estado dos filtros
 const filtrosColapsados = ref(true);
@@ -377,6 +394,7 @@ const ordenacao = reactive({
 
 // Estado da tabela
 const veiculos = ref<Veiculo[]>([]);
+const refreshingId = ref<string | null>(null);
 const isLoading = ref(false);
 const modoVisualizacao = ref<'cards' | 'tabela'>('tabela');
 
@@ -630,6 +648,40 @@ function abrirModalEditar(veiculo: Veiculo) {
 function fecharModalEditar() {
   modalEditarAberto.value = false;
   veiculoSelecionado.value = null;
+}
+
+function atualizarVeiculoDaLista(veiculoAtualizado: Veiculo) {
+  const index = veiculos.value.findIndex(v => v.urlOrigem === veiculoAtualizado.urlOrigem);
+  if (index !== -1) {
+    veiculos.value[index] = {
+      ...veiculos.value[index],
+      ...veiculoAtualizado
+    };
+  }
+}
+
+async function atualizarVeiculo(veiculo: Veiculo) {
+  if (!veiculo.urlOrigem || refreshingId.value === veiculo.id) {
+    return;
+  }
+
+  try {
+    refreshingId.value = veiculo.id;
+    const dataLeilao = veiculo.dataLeilao ? new Date(veiculo.dataLeilao).toISOString() : undefined;
+    const result = await scrapperService.executarScrapper(veiculo.urlOrigem, dataLeilao);
+
+    if (!result.veiculo) {
+      alert('Lote cancelado/descartado.');
+      return;
+    }
+
+    atualizarVeiculoDaLista(result.veiculo);
+  } catch (error) {
+    console.error('Erro ao atualizar lote:', error);
+    alert('Erro ao atualizar lote. Verifique os logs.');
+  } finally {
+    refreshingId.value = null;
+  }
 }
 
 async function salvarVeiculo(veiculoEditado: Veiculo) {
