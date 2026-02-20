@@ -50,7 +50,8 @@ export default defineEventHandler(async (event) => {
                 dataLeilao: dataLeilao,
                 urlOrigem: veiculo.urlOrigem,
                 active: isActive,
-                leiloeiro: veiculo.leiloeiro
+                leiloeiro: veiculo.leiloeiro,
+                patioUf: veiculo.patioUf
             },
             update: {
                 lanceAtual: veiculo.lanceAtual,

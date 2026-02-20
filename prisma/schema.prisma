@@ -28,4 +28,5 @@ model Veiculo {
   updatedAt     DateTime @updatedAt
   active        Boolean  @default(false)
   leiloeiro     String
+  patioUf       String?
 }

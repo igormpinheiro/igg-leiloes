@@ -48,7 +48,8 @@ export class LeiloParser {
                 dataCaptura: new Date(),
                 urlOrigem: url,
                 active: true,
-                leiloeiro: 'Leilo'
+                leiloeiro: 'Leilo',
+                patioUf: this.extrairPatioUf(root, url) || undefined,
             };
 
             return veiculo;
@@ -56,6 +57,45 @@ export class LeiloParser {
             console.error('Erro ao parsear HTML do Leilo:', error);
             throw new Error('Falha ao extrair informações da página Leilo. Verifique se o formato do site mudou.');
         }
+    }
+
+    private static extrairPatioUf(root: HTMLElement, url: string): string | null {
+        try {
+            const labelNodes = root.querySelectorAll('.label-categoria');
+            for (const label of labelNodes) {
+                if (!label.textContent || !label.textContent.toLowerCase().includes('localização')) continue;
+
+                const container =
+                    label.parentElement?.parentElement ||
+                    label.parentElement ||
+                    label;
+
+                const smallText = container.querySelector('small')?.textContent?.trim() || '';
+                const matchSmall = smallText.match(/\/([A-Z]{2})\)/);
+                if (matchSmall?.[1]) return matchSmall[1];
+
+                const containerText = container.textContent || '';
+                const matchText = containerText.match(/\/([A-Z]{2})\)/);
+                if (matchText?.[1]) return matchText[1];
+
+                const linkHref = container.querySelector('a[href*="/patios/"]')?.getAttribute('href') || '';
+                const matchHref = linkHref.match(/\/patios\/[^/]+\/([A-Z]{2})\//);
+                if (matchHref?.[1]) return matchHref[1];
+            }
+        } catch (error) {
+            console.error('Erro ao extrair UF do pátio (HTML):', error);
+        }
+
+        try {
+            const slugMatch = url.match(/\/leilao\/([^/]+)\//);
+            const slug = slugMatch?.[1] || '';
+            if (slug.includes('goias')) return 'GO';
+            if (slug.includes('distrito-federal')) return 'DF';
+        } catch (error) {
+            console.error('Erro ao extrair UF do pátio (URL):', error);
+        }
+
+        return null;
     }
 
     private static extrairDadosJsonLd(html: string): {

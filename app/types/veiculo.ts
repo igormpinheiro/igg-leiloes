@@ -14,4 +14,5 @@ export interface Veiculo {
     urlOrigem: string;
     active: boolean;
     leiloeiro?: string;
+    patioUf?: string;
 }

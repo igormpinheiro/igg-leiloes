@@ -28,7 +28,7 @@
         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Mercado</th>
         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="$emit('ordenar', 'porcentagemMercado')">
           <div class="flex items-center">
-            %
+            FIPE
             <Icon v-if="ordenacao.campo === 'porcentagemMercado'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm ml-1" />
           </div>
         </th>
@@ -63,6 +63,13 @@
                 {{ veiculo.marca }} {{ veiculo.descricao }}
               </a>
               <span v-if="veiculo.sinistro" class="mr-1 text-red-500" title="Veículo com sinistro">🚨</span>
+              <span
+                  v-if="veiculo.patioUf"
+                  class="ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold"
+                  :class="getPatioUfClass(veiculo.patioUf)"
+              >
+                {{ veiculo.patioUf }}
+              </span>
               <span
                   class="absolute h-1.5 w-1.5 rounded-full"
                   :class="veiculo.active ? 'bg-green-500' : 'bg-gray-400'"
@@ -125,6 +132,13 @@ import type { Veiculo } from '~/types/veiculo';
 const { formatarValor } = useFormatacao();
 const { getScore, getScoreClass, getScoreIcon, getPercentageClass, getPorcentagemMercado, calcularLucroEstimado, getLucroClass } = useVeiculoScore();
 const { getLeiloeiroInitial, getLeiloeiroClass } = useLeiloeiro();
+
+function getPatioUfClass(uf: string | undefined): string {
+  if (!uf) return 'bg-gray-100 text-gray-700';
+  if (uf === 'DF') return 'bg-blue-100 text-blue-800';
+  if (uf === 'GO') return 'bg-green-100 text-green-800';
+  return 'bg-gray-100 text-gray-700';
+}
 
 defineProps<{
   veiculos: Veiculo[];

@@ -129,7 +129,8 @@ const filtros = reactive({
   kmMin: null as number | null,
   kmMax: null as number | null,
   semSinistro: false,
-  apenasAtivos: true
+  apenasAtivos: true,
+  patioUf: ''
 });
 
 const ordenacao = reactive({
@@ -163,6 +164,7 @@ const veiculosFiltrados = computed(() => {
 
   if (filtros.semSinistro) resultado = resultado.filter(v => !v.sinistro);
   if (filtros.apenasAtivos) resultado = resultado.filter(v => v.active);
+  if (filtros.patioUf) resultado = resultado.filter(v => (v.patioUf || '').toUpperCase() === filtros.patioUf);
 
   resultado.sort((a, b) => {
     let valorA: any;
@@ -227,6 +229,7 @@ function resetarFiltros() {
   filtros.kmMax = null;
   filtros.semSinistro = false;
   filtros.apenasAtivos = true;
+  filtros.patioUf = '';
 }
 
 function abrirModalEditar(veiculo: Veiculo) {

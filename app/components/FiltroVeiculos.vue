@@ -87,6 +87,19 @@
       </label>
     </div>
 
+    <!-- Filtro de UF -->
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700 mb-1">UF do pátio</label>
+      <select
+          v-model="filtros.patioUf"
+          class="w-full p-2 border rounded focus:ring focus:ring-blue-200"
+      >
+        <option value="">Todas</option>
+        <option value="DF">DF</option>
+        <option value="GO">GO</option>
+      </select>
+    </div>
+
     <button
         @click="$emit('aplicar')"
         class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
@@ -114,6 +127,7 @@ interface Filtros {
   kmMax: number | null;
   semSinistro: boolean;
   apenasAtivos: boolean;
+  patioUf: string;
 }
 
 defineProps<{

@@ -32,7 +32,8 @@ export class LeilaoParser {
                 dataCaptura: new Date(),
                 urlOrigem: url,
                 active: true,
-                leiloeiro: 'parquedosleiloes'
+                leiloeiro: 'parquedosleiloes',
+                patioUf: 'DF'
             };
 
             return veiculo;

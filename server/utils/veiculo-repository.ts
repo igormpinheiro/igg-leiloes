@@ -34,6 +34,7 @@ export async function upsertVeiculo(
     if (!existing.dataLeilao) updateData.dataLeilao = dataLeilaoDate;
     if (!existing.dataCaptura) updateData.dataCaptura = new Date(veiculo.dataCaptura);
     if (isMissingText(existing.leiloeiro)) updateData.leiloeiro = veiculo.leiloeiro || 'Desconhecido';
+    if (isMissingText(existing.patioUf) && veiculo.patioUf) updateData.patioUf = veiculo.patioUf;
 
     const result = await prisma.veiculo.update({
       where: { urlOrigem: veiculo.urlOrigem },
@@ -58,6 +59,7 @@ export async function upsertVeiculo(
       urlOrigem: veiculo.urlOrigem,
       active: isActive,
       leiloeiro: veiculo.leiloeiro || 'Desconhecido',
+      patioUf: veiculo.patioUf,
     },
   });
 
