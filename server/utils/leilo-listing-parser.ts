@@ -143,7 +143,7 @@ export class LeiloListingParser {
         try {
             // Estratégia 1: Buscar "lotesTotal" que aparece no PaginaLeilaoState
             const lotesTotalMatch = html.match(/"lotesTotal"\s*:\s*(\d+)/);
-            const totalLotes = lotesTotalMatch ? parseInt(lotesTotalMatch[1]) : 0;
+            const totalLotes = lotesTotalMatch?.[1] ? parseInt(lotesTotalMatch[1]) : 0;
 
             if (totalLotes === 0) {
                 console.warn('[LeiloListingParser] lotesTotal não encontrado ou é zero');
@@ -181,7 +181,7 @@ export class LeiloListingParser {
             if (leiloesSiteStateMatch) {
                 try {
                     // Extrair o array completo (pode ser muito grande)
-                    const stateText = leiloesSiteStateMatch[1];
+                    const stateText = leiloesSiteStateMatch[1] ?? '';
 
                     // Buscar por leilões não executados/cancelados
                     // Procurar por padrões como: {"uid":"...","nome":"...","situacao":"...","quantidadeLotes":...}
@@ -219,7 +219,7 @@ export class LeiloListingParser {
                     const leiloesComMesmoTotal = leiloesEncontrados.filter(l => l.qtdLotes === totalLotes);
 
                     if (leiloesComMesmoTotal.length === 1) {
-                        const leilao = leiloesComMesmoTotal[0];
+                        const leilao = leiloesComMesmoTotal[0]!;
                         console.log(`[LeiloListingParser] Leilão identificado por match de totalLotes: ${leilao.nome}`);
 
                         return {
@@ -234,7 +234,7 @@ export class LeiloListingParser {
                     // (estratégia adicional: procurar no nome do leilão termos que batam com o slug)
                     // Por enquanto, se há apenas um leilão ativo, usar ele
                     if (leiloesEncontrados.length === 1) {
-                        const leilao = leiloesEncontrados[0];
+                        const leilao = leiloesEncontrados[0]!;
                         console.log(`[LeiloListingParser] Único leilão ativo encontrado: ${leilao.nome}`);
 
                         return {
@@ -253,7 +253,7 @@ export class LeiloListingParser {
                         });
 
                         // Usar o primeiro como fallback
-                        const leilao = leiloesEncontrados[0];
+                        const leilao = leiloesEncontrados[0]!;
                         console.warn(`[LeiloListingParser] Usando primeiro leilão como fallback: ${leilao.nome}`);
 
                         return {

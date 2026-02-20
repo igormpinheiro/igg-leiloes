@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
         const { url, maxVeiculos = 10 } = await readBody(event);
 
         if (!url) {
-            return createError({
+            throw createError({
                 statusCode: 400,
                 statusMessage: 'URL inicial é obrigatória'
             });
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
 
         // Verificar se a URL é de um site suportado
         if (!url.includes('parquedosleiloes.com.br')) {
-            return createError({
+            throw createError({
                 statusCode: 400,
                 statusMessage: 'URL não suportada. Atualmente só suportamos o site Parque dos Leilões.'
             });
@@ -131,7 +131,7 @@ export default defineEventHandler(async (event) => {
     } catch (error: any) {
         console.error('Erro ao realizar extração sequencial:', error);
 
-        return createError({
+        throw createError({
             statusCode: 500,
             statusMessage: error.message || 'Ocorreu um erro ao realizar a extração sequencial'
         });

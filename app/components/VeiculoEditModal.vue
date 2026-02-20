@@ -23,9 +23,9 @@
               <div>
                 <span
                     class="px-2 py-1 text-sm font-medium rounded-full"
-                    :class="getScoreClass(getScore())"
+                    :class="getScoreClass(getScore(veiculoEditado))"
                 >
-                  {{ getScoreIcon(getScore()) }} {{ getScore().toFixed(1) }}
+                  {{ getScoreIcon(getScore(veiculoEditado)) }} {{ getScore(veiculoEditado).toFixed(1) }}
                 </span>
               </div>
             </div>
@@ -37,9 +37,9 @@
                 <span
                     v-if="veiculoEditado.valorMercado > 0"
                     class="px-2 py-1 text-sm font-medium rounded"
-                    :class="getPercentageClass(getPorcentagemMercado())"
+                    :class="getPercentageClass(getPorcentagemMercado(veiculoEditado))"
                 >
-                  {{ getPorcentagemMercado() }}%
+                  {{ getPorcentagemMercado(veiculoEditado) }}%
                 </span>
                 <span v-else>--</span>
               </div>
@@ -52,9 +52,9 @@
                 <span
                     v-if="veiculoEditado.valorMercado > 0"
                     class="px-2 py-1 text-sm font-medium rounded"
-                    :class="getLucroClass(calcularLucroEstimado())"
+                    :class="getLucroTextClass(calcularLucroEstimado(veiculoEditado))"
                 >
-                  {{ formatarValor(calcularLucroEstimado()) }}
+                  {{ formatarValor(calcularLucroEstimado(veiculoEditado)) }}
                 </span>
                 <span v-else>--</span>
               </div>
@@ -266,16 +266,16 @@
                     <span>R$ {{ formatarValor(veiculoEditado.lanceAtual) }}</span>
                   </li>
                   <li class="flex justify-between">
-                    <span>Taxa (5%):</span>
-                    <span>R$ {{ formatarValor(veiculoEditado.lanceAtual * 0.05) }}</span>
+                    <span>Taxa ({{ taxaPercent }}%):</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.lanceAtual * CONFIG_NEGOCIO.taxaLeilao) }}</span>
                   </li>
                   <li class="flex justify-between">
                     <span>Despesas Fixas:</span>
-                    <span>R$ 1.700,00</span>
+                    <span>R$ {{ formatarValor(CONFIG_NEGOCIO.despesasFixas) }}</span>
                   </li>
                   <li class="flex justify-between font-medium pt-1 border-t border-blue-200">
                     <span>Total Custos:</span>
-                    <span>R$ {{ formatarValor(veiculoEditado.lanceAtual + (veiculoEditado.lanceAtual * 0.05) + 1700) }}</span>
+                    <span>R$ {{ formatarValor(custoTotal) }}</span>
                   </li>
                 </ul>
               </div>
@@ -289,12 +289,12 @@
                     <span>R$ {{ formatarValor(veiculoEditado.valorMercado) }}</span>
                   </li>
                   <li class="flex justify-between">
-                    <span>Comissão (15%):</span>
-                    <span>R$ {{ formatarValor(veiculoEditado.valorMercado * 0.15) }}</span>
+                    <span>Comissão ({{ comissaoPercent }}%):</span>
+                    <span>R$ {{ formatarValor(veiculoEditado.valorMercado * CONFIG_NEGOCIO.comissaoVenda) }}</span>
                   </li>
                   <li class="flex justify-between font-medium pt-1 border-t border-blue-200">
                     <span>Valor Líquido:</span>
-                    <span>R$ {{ formatarValor(veiculoEditado.valorMercado - (veiculoEditado.valorMercado * 0.15)) }}</span>
+                    <span>R$ {{ formatarValor(valorLiquido) }}</span>
                   </li>
                 </ul>
               </div>
@@ -305,16 +305,16 @@
                 <div class="space-y-2">
                   <div class="flex justify-between text-sm">
                     <span>Valor Líquido:</span>
-                    <span>R$ {{ formatarValor(veiculoEditado.valorMercado - (veiculoEditado.valorMercado * 0.15)) }}</span>
+                    <span>R$ {{ formatarValor(valorLiquido) }}</span>
                   </div>
                   <div class="flex justify-between text-sm">
                     <span>Total Custos:</span>
-                    <span>R$ {{ formatarValor(veiculoEditado.lanceAtual + (veiculoEditado.lanceAtual * 0.05) + 1700) }}</span>
+                    <span>R$ {{ formatarValor(custoTotal) }}</span>
                   </div>
                   <div class="flex justify-between font-medium pt-2 border-t border-blue-300">
                     <span>Lucro Estimado:</span>
-                    <span :class="getLucroClass(calcularLucroEstimado())">
-                      R$ {{ formatarValor(calcularLucroEstimado()) }}
+                    <span :class="getLucroTextClass(calcularLucroEstimado(veiculoEditado))">
+                      R$ {{ formatarValor(calcularLucroEstimado(veiculoEditado)) }}
                     </span>
                   </div>
                 </div>
@@ -344,9 +344,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, defineProps, defineEmits, watch } from 'vue';
+import { reactive, watch, computed } from 'vue';
 import type { Veiculo } from '~/types/veiculo';
-import { VeiculoRanker } from '~/services/veiculoRankerService';
+import { CONFIG_NEGOCIO } from '~/config/negocio';
+
+const { formatarValor } = useFormatacao();
+const { getScore, getScoreClass, getScoreIcon, getPercentageClass, getPorcentagemMercado, calcularLucroEstimado, getLucroTextClass } = useVeiculoScore();
 
 const props = defineProps<{
   isOpen: boolean;
@@ -355,7 +358,9 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'save']);
 
-// Cria uma cópia do veículo para edição
+const taxaPercent = CONFIG_NEGOCIO.taxaLeilao * 100;
+const comissaoPercent = CONFIG_NEGOCIO.comissaoVenda * 100;
+
 const veiculoEditado = reactive<Veiculo>({
   id: '',
   descricao: '',
@@ -371,122 +376,30 @@ const veiculoEditado = reactive<Veiculo>({
   active: true
 });
 
-// Atualiza os dados do formulário quando o veículo muda
 watch(() => props.veiculo, (novoVeiculo) => {
   if (novoVeiculo) {
     Object.assign(veiculoEditado, JSON.parse(JSON.stringify(novoVeiculo)));
   }
 }, { immediate: true });
 
-// Funções para incrementar/decrementar quilometragem (10.000 km)
-function incrementarQuilometragem() {
-  veiculoEditado.quilometragem += 10000;
-}
+const custoTotal = computed(() =>
+  veiculoEditado.lanceAtual + (veiculoEditado.lanceAtual * CONFIG_NEGOCIO.taxaLeilao) + CONFIG_NEGOCIO.despesasFixas
+);
 
-function decrementarQuilometragem() {
-  if (veiculoEditado.quilometragem >= 10000) {
-    veiculoEditado.quilometragem -= 10000;
-  }
-}
+const valorLiquido = computed(() =>
+  veiculoEditado.valorMercado - (veiculoEditado.valorMercado * CONFIG_NEGOCIO.comissaoVenda)
+);
 
-// Funções para incrementar/decrementar valores (R$ 1.000,00)
-function incrementarLanceInicial() {
-  veiculoEditado.lanceInicial += 1000;
-}
+function incrementarQuilometragem() { veiculoEditado.quilometragem += 10000; }
+function decrementarQuilometragem() { if (veiculoEditado.quilometragem >= 10000) veiculoEditado.quilometragem -= 10000; }
+function incrementarLanceInicial() { veiculoEditado.lanceInicial += 1000; }
+function decrementarLanceInicial() { if (veiculoEditado.lanceInicial >= 1000) veiculoEditado.lanceInicial -= 1000; }
+function incrementarLanceAtual() { veiculoEditado.lanceAtual += 1000; }
+function decrementarLanceAtual() { if (veiculoEditado.lanceAtual >= 1000) veiculoEditado.lanceAtual -= 1000; }
+function incrementarValorMercado() { veiculoEditado.valorMercado += 1000; }
+function decrementarValorMercado() { if (veiculoEditado.valorMercado >= 1000) veiculoEditado.valorMercado -= 1000; }
 
-function decrementarLanceInicial() {
-  if (veiculoEditado.lanceInicial >= 1000) {
-    veiculoEditado.lanceInicial -= 1000;
-  }
-}
-
-function incrementarLanceAtual() {
-  veiculoEditado.lanceAtual += 1000;
-}
-
-function decrementarLanceAtual() {
-  if (veiculoEditado.lanceAtual >= 1000) {
-    veiculoEditado.lanceAtual -= 1000;
-  }
-}
-
-function incrementarValorMercado() {
-  veiculoEditado.valorMercado += 1000;
-}
-
-function decrementarValorMercado() {
-  if (veiculoEditado.valorMercado >= 1000) {
-    veiculoEditado.valorMercado -= 1000;
-  }
-}
-
-// Calcular o score do veículo
-function getScore(): number {
-  return VeiculoRanker.calcularScore(veiculoEditado);
-}
-
-// Classes CSS dinâmicas baseadas no score
-function getScoreClass(score: number): string {
-  if (score >= 8.5) return 'bg-green-100 text-green-800';
-  if (score >= 7.0) return 'bg-blue-100 text-blue-800';
-  if (score >= 5.0) return 'bg-yellow-100 text-yellow-800';
-  if (score >= 3.0) return 'bg-orange-100 text-orange-800';
-  return 'bg-red-100 text-red-800';
-}
-
-// Ícones baseados no score
-function getScoreIcon(score: number): string {
-  if (score >= 8.5) return '🏆'; // Excelente
-  if (score >= 7.0) return '🥈'; // Muito Bom
-  if (score >= 5.0) return '🥉'; // Bom
-  if (score >= 3.0) return '⚠️'; // Regular
-  return '❌'; // Ruim
-}
-
-// Calcula a porcentagem do lance atual em relação ao valor de mercado
-function getPorcentagemMercado(): number {
-  if (!veiculoEditado.valorMercado) return 0;
-  const valorVeiculo = veiculoEditado.lanceAtual > 0 ? veiculoEditado.lanceAtual : veiculoEditado.lanceInicial;
-  return Math.round((valorVeiculo / veiculoEditado.valorMercado) * 100);
-}
-
-// Classes CSS dinâmicas baseadas na porcentagem do lance
-function getPercentageClass(percentage: number): string {
-  if (percentage < 50) return 'bg-green-500 text-white font-bold'; // Excelente (destaque maior)
-  if (percentage < 60) return 'bg-green-200 text-green-900'; // Muito Bom
-  if (percentage < 70) return 'bg-blue-100 text-blue-800'; // Bom
-  if (percentage < 80) return 'bg-yellow-100 text-yellow-800'; // Regular
-  return 'bg-red-100 text-red-800'; // Ruim
-}
-
-// Calcular o lucro estimado
-function calcularLucroEstimado(): number {
-  // (Valor atual + 5% + 1700) - 15% - valor de mercado
-  const custoTotal = veiculoEditado.lanceAtual + (veiculoEditado.lanceAtual * 0.05) + 1700;
-  const valorVendaLiquido = veiculoEditado.valorMercado - (veiculoEditado.valorMercado * 0.15);
-
-  return valorVendaLiquido - custoTotal;
-}
-
-// Classes CSS para o lucro estimado
-function getLucroClass(lucro: number): string {
-  if (lucro >= 10000) return 'text-green-600 font-bold';
-  if (lucro >= 5000) return 'text-blue-600 font-bold';
-  if (lucro >= 0) return 'text-yellow-600 font-bold';
-  return 'text-red-600 font-bold';
-}
-
-// Formatar valores monetários
-function formatarValor(valor: number): string {
-  return valor.toLocaleString('pt-BR');
-}
-
-// Fecha o modal
-function fecharModal() {
-  emit('close');
-}
-
-// Salvar as alterações
+function fecharModal() { emit('close'); }
 function salvarVeiculo() {
   emit('save', { ...veiculoEditado });
   fecharModal();

@@ -1,0 +1,75 @@
+// composables/useVeiculoScore.ts
+import type { Veiculo } from '~/types/veiculo'
+import { VeiculoRanker } from '~/services/veiculoRankerService'
+import { CONFIG_NEGOCIO } from '~/config/negocio'
+
+export function useVeiculoScore() {
+  const { score, porcentagem, lucro } = CONFIG_NEGOCIO
+
+  function getScore(veiculo: Veiculo): number {
+    return VeiculoRanker.calcularScore(veiculo)
+  }
+
+  function getScoreClass(scoreValue: number): string {
+    if (scoreValue >= score.excelente) return 'bg-green-100 text-green-800'
+    if (scoreValue >= score.muitoBom) return 'bg-blue-100 text-blue-800'
+    if (scoreValue >= score.bom) return 'bg-yellow-100 text-yellow-800'
+    if (scoreValue >= score.regular) return 'bg-orange-100 text-orange-800'
+    return 'bg-red-100 text-red-800'
+  }
+
+  function getScoreIcon(scoreValue: number): string {
+    if (scoreValue >= score.excelente) return '🏆'
+    if (scoreValue >= score.muitoBom) return '🥈'
+    if (scoreValue >= score.bom) return '🥉'
+    if (scoreValue >= score.regular) return '⚠️'
+    return '❌'
+  }
+
+  function getPercentageClass(percentage: number): string {
+    if (percentage < porcentagem.excelente) return 'bg-green-500 text-white font-bold'
+    if (percentage < porcentagem.muitoBom) return 'bg-green-200 text-green-900'
+    if (percentage < porcentagem.bom) return 'bg-blue-100 text-blue-800'
+    if (percentage < porcentagem.regular) return 'bg-yellow-100 text-yellow-800'
+    return 'bg-red-100 text-red-800'
+  }
+
+  function getPorcentagemMercado(veiculo: Veiculo): number {
+    if (!veiculo.valorMercado) return 0
+    const valorVeiculo = veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial
+    return Math.round((valorVeiculo / veiculo.valorMercado) * 100)
+  }
+
+  function calcularLucroEstimado(veiculo: Veiculo): number {
+    if (!veiculo.valorMercado) return 0
+    const lance = veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial
+    const custoTotal = lance + (lance * CONFIG_NEGOCIO.taxaLeilao) + CONFIG_NEGOCIO.despesasFixas
+    const valorVendaLiquido = veiculo.valorMercado - (veiculo.valorMercado * CONFIG_NEGOCIO.comissaoVenda)
+    return valorVendaLiquido - custoTotal
+  }
+
+  function getLucroClass(lucroValue: number): string {
+    if (lucroValue >= lucro.excelente) return 'bg-green-100 text-green-800'
+    if (lucroValue >= lucro.bom) return 'bg-blue-100 text-blue-800'
+    if (lucroValue >= 0) return 'bg-yellow-100 text-yellow-800'
+    return 'bg-red-100 text-red-800'
+  }
+
+  function getLucroTextClass(lucroValue: number): string {
+    if (lucroValue >= lucro.excelente) return 'text-green-600 font-bold'
+    if (lucroValue >= lucro.bom) return 'text-blue-600 font-bold'
+    if (lucroValue >= 0) return 'text-yellow-600 font-bold'
+    return 'text-red-600 font-bold'
+  }
+
+  return {
+    getScore,
+    getScoreClass,
+    getScoreIcon,
+    getPercentageClass,
+    getPorcentagemMercado,
+    calcularLucroEstimado,
+    getLucroClass,
+    getLucroTextClass,
+  }
+}

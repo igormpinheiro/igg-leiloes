@@ -1,5 +1,6 @@
 // services/veiculoRankerService.ts
 import type { Veiculo } from '~/types/veiculo';
+import { CONFIG_NEGOCIO } from '~/config/negocio';
 
 /**
  * Serviço responsável por calcular e rankear os veículos com base em diversos fatores
@@ -43,9 +44,7 @@ export class VeiculoRanker {
         // Se o veículo for do ano atual, consideramos 0 anos
         const anosParaEstimativa = Math.max(0, anosCompletos - 1);
 
-        // Estimar quilometragem: 14.000 km por ano
-
-        return anosParaEstimativa * 14000;
+        return anosParaEstimativa * CONFIG_NEGOCIO.kmAnualEstimado;
     }
 
     /**

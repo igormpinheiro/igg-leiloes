@@ -77,9 +77,9 @@
             <span
                 v-if="veiculo.valorMercado > 0"
                 class="px-2 py-1 text-xs font-medium rounded"
-                :class="getPercentageClass(getPorcentagemMercado())"
+                :class="getPercentageClass(getPorcentagemMercado(veiculo))"
             >
-              {{ getPorcentagemMercado() }}%
+              {{ getPorcentagemMercado(veiculo) }}%
             </span>
             <span v-else>--</span>
           </div>
@@ -89,9 +89,9 @@
           <div>
             <span
                 class="px-2 py-1 text-xs font-medium rounded-full"
-                :class="getScoreClass(getScore())"
+                :class="getScoreClass(getScore(veiculo))"
             >
-              {{ getScoreIcon(getScore()) }} {{ getScore().toFixed(1) }}
+              {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
             </span>
           </div>
         </div>
@@ -101,10 +101,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits } from 'vue';
+import { ref } from 'vue';
 import type { Veiculo } from '~/types/veiculo';
-import { VeiculoRanker } from '~/services/veiculoRankerService';
 import { scrapperService } from '~/services/scrapperService';
+
+const { formatarValor, formatarData } = useFormatacao();
+const { getScore, getScoreClass, getScoreIcon, getPercentageClass, getPorcentagemMercado } = useVeiculoScore();
 
 const props = defineProps<{
   veiculo: Veiculo;
@@ -113,57 +115,6 @@ const props = defineProps<{
 const emit = defineEmits(['edit', 'refresh']);
 const isRefreshing = ref(false);
 
-// Formatação de valores
-function formatarValor(valor: number): string {
-  return valor.toLocaleString('pt-BR');
-}
-
-// Formatação de data
-function formatarData(data: Date | string): string {
-  const d = typeof data === 'string' ? new Date(data) : data;
-  return d.toLocaleDateString('pt-BR');
-}
-
-// Calcula a porcentagem do lance atual em relação ao valor de mercado
-function getPorcentagemMercado(): number {
-  if (!props.veiculo.valorMercado) return 0;
-  const valorVeiculo = props.veiculo.lanceAtual > 0 ? props.veiculo.lanceAtual : props.veiculo.lanceInicial;
-  return Math.round((valorVeiculo / props.veiculo.valorMercado) * 100);
-}
-
-// Classes CSS dinâmicas baseadas no score
-function getScoreClass(score: number): string {
-  if (score >= 8.5) return 'bg-green-100 text-green-800';
-  if (score >= 7.0) return 'bg-blue-100 text-blue-800';
-  if (score >= 5.0) return 'bg-yellow-100 text-yellow-800';
-  if (score >= 3.0) return 'bg-orange-100 text-orange-800';
-  return 'bg-red-100 text-red-800';
-}
-
-// Ícones baseados no score
-function getScoreIcon(score: number): string {
-  if (score >= 8.5) return '🏆'; // Excelente
-  if (score >= 7.0) return '🥈'; // Muito Bom
-  if (score >= 5.0) return '🥉'; // Bom
-  if (score >= 3.0) return '⚠️'; // Regular
-  return '❌'; // Ruim
-}
-
-// Classes CSS dinâmicas baseadas na porcentagem do lance
-function getPercentageClass(percentage: number): string {
-  if (percentage < 50) return 'bg-green-500 text-white font-bold'; // Excelente (destaque maior)
-  if (percentage < 60) return 'bg-green-200 text-green-900'; // Muito Bom
-  if (percentage < 70) return 'bg-blue-100 text-blue-800'; // Bom
-  if (percentage < 80) return 'bg-yellow-100 text-yellow-800'; // Regular
-  return 'bg-red-100 text-red-800'; // Ruim
-}
-
-// Calcular o score do veículo
-function getScore(): number {
-  return VeiculoRanker.calcularScore(props.veiculo);
-}
-
-// Emitir evento para editar o veículo
 function editarVeiculo() {
   emit('edit', props.veiculo);
 }

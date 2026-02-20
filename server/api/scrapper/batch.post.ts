@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
         const { urls } = await readBody(event);
 
         if (!urls || !Array.isArray(urls) || urls.length === 0) {
-            return createError({
+            throw createError({
                 statusCode: 400,
                 statusMessage: 'É necessário enviar uma lista de URLs'
             });
@@ -108,7 +108,7 @@ export default defineEventHandler(async (event) => {
     } catch (error: any) {
         console.error('Erro ao processar o lote de URLs:', error);
 
-        return createError({
+        throw createError({
             statusCode: 500,
             statusMessage: error.message || 'Ocorreu um erro ao processar o lote de URLs'
         });

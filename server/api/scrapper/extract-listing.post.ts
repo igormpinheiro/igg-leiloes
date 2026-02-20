@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
         const { url, fullExtraction = true } = await readBody(event);
 
         if (!url) {
-            return createError({
+            throw createError({
                 statusCode: 400,
                 statusMessage: 'URL é obrigatória'
             });
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
         const isLeilo = url.includes('leilo.com.br');
 
         if (!isParqueDosLeiloes && !isLeilo) {
-            return createError({
+            throw createError({
                 statusCode: 400,
                 statusMessage: 'URL não suportada. Atualmente suportamos: Parque dos Leilões e Leilo.'
             });
@@ -58,7 +58,7 @@ export default defineEventHandler(async (event) => {
                 }
             } catch (error: any) {
                 console.error('Erro ao processar listagem do Leilo:', error);
-                return createError({
+                throw createError({
                     statusCode: 500,
                     statusMessage: `Erro ao processar listagem do Leilo: ${error.message}`
                 });
@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
 
         if (!response.ok) {
             console.error(`Erro ao buscar URL da listagem: ${response.status} ${response.statusText}`);
-            return createError({
+            throw createError({
                 statusCode: 500,
                 statusMessage: `Não foi possível acessar a URL da listagem. Status: ${response.status}`
             });
@@ -135,7 +135,7 @@ export default defineEventHandler(async (event) => {
     } catch (error: any) {
         console.error('Erro ao extrair URLs da listagem:', error);
 
-        return createError({
+        throw createError({
             statusCode: 500,
             statusMessage: error.message || 'Ocorreu um erro ao extrair as URLs da listagem'
         });

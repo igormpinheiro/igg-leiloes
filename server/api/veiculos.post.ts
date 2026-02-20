@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
         const veiculo = body;
 
         if (!veiculo || !veiculo.descricao || !veiculo.marca) {
-            return createError({
+            throw createError({
                 statusCode: 400,
                 statusMessage: 'Dados do veículo incompletos'
             });
@@ -71,7 +71,7 @@ export default defineEventHandler(async (event) => {
     } catch (error: any) {
         console.error('Erro ao salvar veículo:', error);
 
-        return createError({
+        throw createError({
             statusCode: 500,
             statusMessage: error.message || 'Ocorreu um erro ao salvar o veículo'
         });

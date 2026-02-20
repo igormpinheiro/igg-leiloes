@@ -34,9 +34,9 @@
             <div class="flex items-center mb-4 md:mb-0">
               <span
                   class="px-3 py-1 text-sm font-medium rounded-full mr-2"
-                  :class="getScoreClass(getVeiculoScore(veiculo))"
+                  :class="getScoreClass(getScore(veiculo))"
               >
-                {{ getScoreIcon(getVeiculoScore(veiculo)) }} {{ getVeiculoScore(veiculo).toFixed(1) }}
+                {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
               </span>
               <span class="text-gray-500">Capturado em {{ new Date(veiculo.dataCaptura).toLocaleString('pt-BR') }}</span>
             </div>
@@ -118,7 +118,7 @@
             </div>
           </div>
 
-          <!-- Nova seção de estimativa de lucro -->
+          <!-- Estimativa de lucro -->
           <div class="mt-8 p-4 border rounded-lg border-blue-200 bg-blue-50">
             <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-200">Estimativa de Lucro</h2>
             <div class="space-y-3">
@@ -127,15 +127,15 @@
                   <p class="text-sm text-gray-500">Custos Estimados:</p>
                   <ul class="mt-1 space-y-1">
                     <li>Lance Atual: R$ {{ formatarValor(veiculo.lanceAtual) }}</li>
-                    <li>Taxa (5%): R$ {{ formatarValor(veiculo.lanceAtual * 0.05) }}</li>
-                    <li>Despesas Fixas: R$ 1.700,00</li>
+                    <li>Taxa ({{ CONFIG_NEGOCIO.taxaLeilao * 100 }}%): R$ {{ formatarValor(veiculo.lanceAtual * CONFIG_NEGOCIO.taxaLeilao) }}</li>
+                    <li>Despesas Fixas: R$ {{ formatarValor(CONFIG_NEGOCIO.despesasFixas) }}</li>
                   </ul>
                 </div>
                 <div>
                   <p class="text-sm text-gray-500">Vendas:</p>
                   <ul class="mt-1 space-y-1">
                     <li>Valor de Mercado: R$ {{ formatarValor(veiculo.valorMercado) }}</li>
-                    <li>Comissão (15%): R$ {{ formatarValor(veiculo.valorMercado * 0.15) }}</li>
+                    <li>Comissão ({{ CONFIG_NEGOCIO.comissaoVenda * 100 }}%): R$ {{ formatarValor(veiculo.valorMercado * CONFIG_NEGOCIO.comissaoVenda) }}</li>
                   </ul>
                 </div>
               </div>
@@ -145,9 +145,9 @@
                   <span class="font-semibold">Lucro Estimado:</span>
                   <span
                       class="text-lg font-bold"
-                      :class="getLucroClass(calcularLucroEstimado)"
+                      :class="getLucroTextClass(calcularLucroEstimado(veiculo))"
                   >
-                    R$ {{ formatarValor(calcularLucroEstimado) }}
+                    R$ {{ formatarValor(calcularLucroEstimado(veiculo)) }}
                   </span>
                 </div>
               </div>
@@ -159,22 +159,20 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue';
-import { VeiculoRanker } from '~/services/veiculoRankerService';
 import { scrapperService } from '~/services/scrapperService';
+import { CONFIG_NEGOCIO } from '~/config/negocio';
+
+const { formatarValor } = useFormatacao();
+const { getScore, getScoreClass, getScoreIcon, calcularLucroEstimado, getLucroTextClass } = useVeiculoScore();
 
 const route = useRoute();
 const id = computed(() => route.params.id);
 
-// const data = null;
-// const pending = null;
-// const error = null;
-// const refresh = null;
-
 const { data: response, pending, error, refresh } = await useFetch(`/api/veiculos/${id}`, {
   params: { id },
-  transform: (response) => {
+  transform: (response: any) => {
     if (!response || !response.success || !response.data) return null;
 
     return {
@@ -187,59 +185,11 @@ const { data: response, pending, error, refresh } = await useFetch(`/api/veiculo
 const veiculo = computed(() => response.value);
 const isRefreshing = ref(false);
 
-// Cálculo do lucro estimado
-const calcularLucroEstimado = computed(() => {
-  if (!veiculo.value) return 0;
-
-  // (Valor atual + 5% + 1700) - 15% - valor de mercado
-  const custoTotal = veiculo.value.lanceAtual + (veiculo.value.lanceAtual * 0.05) + 1700;
-  const valorVendaLiquido = veiculo.value.valorMercado - (veiculo.value.valorMercado * 0.15);
-
-  return valorVendaLiquido - custoTotal;
-});
-
-// Função para calcular o score de um veículo
-function getVeiculoScore(veiculo) {
-  return VeiculoRanker.calcularScore(veiculo);
-}
-
-// Função para obter o ícone baseado no score
-function getScoreIcon(score) {
-  if (score >= 8.5) return '🏆'; // Excelente
-  if (score >= 7.0) return '🥈'; // Muito Bom
-  if (score >= 5.0) return '🥉'; // Bom
-  if (score >= 3.0) return '⚠️'; // Regular
-  return '❌'; // Ruim
-}
-
-// Função auxiliar para determinar a classe CSS do score
-function getScoreClass(score) {
-  if (score >= 8.5) return 'bg-green-100 text-green-800';
-  if (score >= 7.0) return 'bg-blue-100 text-blue-800';
-  if (score >= 5.0) return 'bg-yellow-100 text-yellow-800';
-  if (score >= 3.0) return 'bg-orange-100 text-orange-800';
-  return 'bg-red-100 text-red-800';
-}
-
-// Função para formatar valores monetários
-function formatarValor(valor) {
-  return valor.toLocaleString('pt-BR');
-}
-
-// Função para determinar a classe CSS da economia
-function getEconomiaClass(economia) {
+function getEconomiaClass(economia: number): string {
   if (economia >= 30000) return 'text-green-600';
   if (economia >= 10000) return 'text-blue-600';
   if (economia >= 5000) return 'text-yellow-600';
   return 'text-gray-600';
-}
-
-// Função para determinar a classe CSS do lucro
-function getLucroClass(lucro) {
-  if (lucro >= 10000) return 'text-green-600';
-  if (lucro >= 5000) return 'text-blue-600';
-  if (lucro >= 0) return 'text-yellow-600';
-  return 'text-red-600';
 }
 
 async function atualizarVeiculo() {

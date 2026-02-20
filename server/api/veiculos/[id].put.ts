@@ -1,38 +1,48 @@
 // server/api/veiculos/[id].put.ts
-import { defineEventHandler, readBody } from 'h3';
-import type { Veiculo } from '~/types/veiculo';
+import prisma from '../../utils/prisma';
+
+const CAMPOS_PERMITIDOS = [
+  'descricao', 'marca', 'ano', 'quilometragem', 'sinistro',
+  'lanceInicial', 'lanceAtual', 'valorMercado', 'active',
+] as const;
 
 export default defineEventHandler(async (event) => {
-    try {
-        // Extrair ID do veículo da URL
-        const id = event.context.params?.id;
+  try {
+    const id = event.context.params?.id;
 
-        if (!id) {
-            return {
-                success: false,
-                message: 'ID do veículo não fornecido',
-            };
-        }
-
-        // Obter os dados atualizados do corpo da requisição
-        const veiculoAtualizado = await readBody(event);
-
-        const veiculoAtualizado2 = await prisma.veiculo.update({
-          where: { id },
-          data: veiculoAtualizado,
-        });
-
-        return {
-            success: true,
-            message: 'Veículo atualizado com sucesso',
-            data: veiculoAtualizado2,
-        };
-    } catch (error) {
-        console.error('Erro ao atualizar veículo:', error);
-
-        return {
-            success: false,
-            message: error instanceof Error ? error.message : 'Erro ao atualizar veículo',
-        };
+    if (!id) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'ID do veículo não fornecido',
+      });
     }
+
+    const body = await readBody(event);
+
+    // Whitelist: apenas campos permitidos passam para o Prisma
+    const updateData: Record<string, any> = {};
+    for (const campo of CAMPOS_PERMITIDOS) {
+      if (body[campo] !== undefined) {
+        updateData[campo] = body[campo];
+      }
+    }
+
+    const veiculoAtualizado = await prisma.veiculo.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return {
+      success: true,
+      message: 'Veículo atualizado com sucesso',
+      data: veiculoAtualizado,
+    };
+  } catch (error) {
+    console.error('Erro ao atualizar veículo:', error);
+
+    throw createError({
+      statusCode: 500,
+      statusMessage: error instanceof Error ? error.message : 'Erro ao atualizar veículo',
+    });
+  }
 });

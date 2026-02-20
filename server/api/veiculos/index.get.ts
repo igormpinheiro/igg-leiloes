@@ -75,7 +75,9 @@ export default defineEventHandler(async (event) => {
         }
 
         // Definir ordenação
-        const [campo, ordem] = ordenacao.split('_');
+        const parts = ordenacao.split('_');
+        const campo = parts[0] || 'lanceAtual';
+        const ordem = parts[1] || 'asc';
         const orderBy: any = {};
         orderBy[campo] = ordem;
 
@@ -120,7 +122,7 @@ export default defineEventHandler(async (event) => {
     } catch (error: any) {
         console.error('Erro ao buscar veículos:', error);
 
-        return createError({
+        throw createError({
             statusCode: 500,
             statusMessage: error.message || 'Erro ao buscar veículos'
         });

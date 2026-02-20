@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
         const id = getRouterParam(event, 'id');
 
         if (!id) {
-            return createError({
+            throw createError({
                 statusCode: 400,
                 statusMessage: 'ID do veículo é obrigatório'
             });
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
         });
 
         if (!veiculo) {
-            return createError({
+            throw createError({
                 statusCode: 404,
                 statusMessage: 'Veículo não encontrado'
             });
@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     } catch (error: any) {
         console.error('Erro ao buscar veículo:', error);
 
-        return createError({
+        throw createError({
             statusCode: 500,
             statusMessage: error.message || 'Erro ao buscar veículo'
         });
