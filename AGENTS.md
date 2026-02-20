@@ -20,7 +20,7 @@ Vehicle auction scraper and ranking tool (Brazilian market). Scrapes vehicle lis
 npm install              # Install dependencies
 npm run dev              # Dev server on http://localhost:3000
 npm run build            # Production build
-npx nuxi typecheck      # Run TypeScript type checking
+npx nuxi typecheck       # Run TypeScript type checking
 npx prisma migrate dev   # Run database migrations
 npx prisma generate      # Regenerate Prisma client after schema changes
 ```
@@ -40,16 +40,16 @@ app/
 │   ├── scrapperService.ts         # Client-side URL validation + API calls
 │   └── veiculoRankerService.ts    # Vehicle scoring (0-10) with weighted factors
 ├── components/
-│   ├── VeiculoCard.vue            # Vehicle card display
+│   ├── VeiculoCard.vue            # Vehicle card (kept for reuse outside index if needed)
 │   ├── VeiculoEditModal.vue       # Vehicle edit modal
-│   ├── FiltroVeiculos.vue         # Filter panel for vehicle listing
-│   ├── TabelaVeiculos.vue         # Vehicle table view
+│   ├── FiltroVeiculos.vue         # Auto-applied filter panel (desktop + mobile drawer usage)
+│   ├── TabelaVeiculos.vue         # Dense/sticky vehicle table view (single mode on index)
 │   └── scrapper/
 │       ├── ExtracacaoSequencial.vue  # Sequential extraction progress
 │       ├── ResultadosLote.vue        # Batch results table
 │       └── HistoricoExtracoes.vue    # Extraction history
 ├── pages/
-│   ├── index.vue                  # Vehicle listing with filters
+│   ├── index.vue                  # Vehicle listing (table-only, no cards toggle)
 │   ├── scrapper.vue               # Scraping interface (individual/listing/sequential)
 │   └── veiculo/[id].vue           # Vehicle detail page
 └── types/veiculo.ts               # Veiculo interface (core domain model)
@@ -64,7 +64,7 @@ server/
 │   │   ├── extract.post.ts            # Single vehicle extraction
 │   │   ├── extract-listing.post.ts    # Listing page extraction (get URLs)
 │   │   ├── extract-sequential.post.ts # Sequential extraction with Puppeteer
-│   │   └── batch.post.ts             # Batch extraction
+│   │   └── batch.post.ts              # Batch extraction
 │   └── veiculos/
 │       ├── index.get.ts               # List vehicles (filters + pagination)
 │       ├── [id].get.ts                # Get single vehicle
@@ -79,6 +79,16 @@ server/
     ├── veiculo-repository.ts          # DB operations (upsert, delete)
     └── prisma.ts                      # Prisma client singleton
 ```
+
+### Home UX Notes (`app/pages/index.vue`)
+
+- Home uses a **single dense table mode** (`TabelaVeiculos`) and no cards toggle.
+- Filter UX is **auto-apply**:
+  - debounce (~250ms) for search and numeric ranges
+  - immediate apply for toggles/select fields
+- Active filters are shown as removable chips.
+- Filters panel is collapsible on desktop and rendered as a drawer on mobile.
+- Current data strategy is still client-side (`/api/veiculos?limit=10000`) with local filtering/sorting.
 
 ### Scraping Pipeline
 
@@ -113,3 +123,27 @@ server/
 - All API error handling uses `throw createError()` (never `return createError()`)
 - Frontend formatting/scoring logic lives in composables, not duplicated in components
 - API update endpoints enforce field whitelists for security
+
+## Skills
+A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
+### Available skills
+- skill-creator: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Codex's capabilities with specialized knowledge, workflows, or tool integrations. (file: /home/igor/.codex/skills/.system/skill-creator/SKILL.md)
+- skill-installer: Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos). (file: /home/igor/.codex/skills/.system/skill-installer/SKILL.md)
+### How to use skills
+- Discovery: The list above is the skills available in this session (name + description + file path). Skill bodies live on disk at the listed paths.
+- Trigger rules: If the user names a skill (with `$SkillName` or plain text) OR the task clearly matches a skill's description shown above, you must use that skill for that turn. Multiple mentions mean use them all. Do not carry skills across turns unless re-mentioned.
+- Missing/blocked: If a named skill isn't in the list or the path can't be read, say so briefly and continue with the best fallback.
+- How to use a skill (progressive disclosure):
+  1) After deciding to use a skill, open its `SKILL.md`. Read only enough to follow the workflow.
+  2) When `SKILL.md` references relative paths (e.g., `scripts/foo.py`), resolve them relative to the skill directory listed above first, and only consider other paths if needed.
+  3) If `SKILL.md` points to extra folders such as `references/`, load only the specific files needed for the request; don't bulk-load everything.
+  4) If `scripts/` exist, prefer running or patching them instead of retyping large code blocks.
+  5) If `assets/` or templates exist, reuse them instead of recreating from scratch.
+- Coordination and sequencing:
+  - If multiple skills apply, choose the minimal set that covers the request and state the order you'll use them.
+  - Announce which skill(s) you're using and why (one short line). If you skip an obvious skill, say why.
+- Context hygiene:
+  - Keep context small: summarize long sections instead of pasting them; only load extra files when needed.
+  - Avoid deep reference-chasing: prefer opening only files directly linked from `SKILL.md` unless you're blocked.
+  - When variants exist (frameworks, providers, domains), pick only the relevant reference file(s) and note that choice.
+- Safety and fallback: If a skill can't be applied cleanly (missing files, unclear instructions), state the issue, pick the next-best approach, and continue.

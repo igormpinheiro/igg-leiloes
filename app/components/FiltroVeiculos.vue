@@ -1,122 +1,117 @@
 <!-- components/FiltroVeiculos.vue -->
 <template>
   <div class="p-4">
-    <h2 class="text-xl font-semibold mb-4">Filtros</h2>
+    <div class="mb-3">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-900">Filtros</h2>
+      <p class="mt-1 text-xs text-slate-500">Atualização automática dos resultados</p>
+    </div>
 
-    <!-- Filtro de descrição -->
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Descrição ou Marca</label>
-      <input
+    <div class="space-y-3">
+      <section class="rounded-lg border border-slate-200 p-3">
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Busca</label>
+        <input
           v-model="filtros.termoPesquisa"
           type="text"
-          placeholder="Pesquisar..."
-          class="w-full p-2 border rounded focus:ring focus:ring-blue-200"
-      />
-    </div>
+          placeholder="Descrição ou marca"
+          class="w-full rounded-md border border-slate-300 px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+        />
+      </section>
 
-    <!-- Filtro de ano -->
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Ano</label>
-      <div class="flex gap-2">
-        <input
+      <section class="rounded-lg border border-slate-200 p-3">
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Ano</label>
+        <div class="grid grid-cols-2 gap-2">
+          <input
             v-model.number="filtros.anoMin"
             type="number"
-            placeholder="Min"
-            class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-        />
-        <input
+            placeholder="Mín"
+            class="rounded-md border px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-blue-100"
+            :class="anoInvalido ? 'border-red-400 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'"
+          />
+          <input
             v-model.number="filtros.anoMax"
             type="number"
-            placeholder="Max"
-            class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-        />
-      </div>
-    </div>
+            placeholder="Máx"
+            class="rounded-md border px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-blue-100"
+            :class="anoInvalido ? 'border-red-400 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'"
+          />
+        </div>
+      </section>
 
-    <!-- Filtro de preço -->
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Lance Atual (R$)</label>
-      <div class="flex gap-2">
-        <input
+      <section class="rounded-lg border border-slate-200 p-3">
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Lance (R$)</label>
+        <div class="grid grid-cols-2 gap-2">
+          <input
             v-model.number="filtros.precoMin"
             type="number"
-            placeholder="Min"
-            class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-        />
-        <input
+            placeholder="Mín"
+            class="rounded-md border px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-blue-100"
+            :class="precoInvalido ? 'border-red-400 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'"
+          />
+          <input
             v-model.number="filtros.precoMax"
             type="number"
-            placeholder="Max"
-            class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-        />
-      </div>
-    </div>
+            placeholder="Máx"
+            class="rounded-md border px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-blue-100"
+            :class="precoInvalido ? 'border-red-400 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'"
+          />
+        </div>
+      </section>
 
-    <!-- Filtro de quilometragem -->
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Quilometragem</label>
-      <div class="flex gap-2">
-        <input
+      <section class="rounded-lg border border-slate-200 p-3">
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Quilometragem</label>
+        <div class="grid grid-cols-2 gap-2">
+          <input
             v-model.number="filtros.kmMin"
             type="number"
-            placeholder="Min"
-            class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-        />
-        <input
+            placeholder="Mín"
+            class="rounded-md border px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-blue-100"
+            :class="kmInvalido ? 'border-red-400 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'"
+          />
+          <input
             v-model.number="filtros.kmMax"
             type="number"
-            placeholder="Max"
-            class="w-1/2 p-2 border rounded focus:ring focus:ring-blue-200"
-        />
-      </div>
-    </div>
+            placeholder="Máx"
+            class="rounded-md border px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:ring-2 focus:ring-blue-100"
+            :class="kmInvalido ? 'border-red-400 focus:border-red-500' : 'border-slate-300 focus:border-blue-500'"
+          />
+        </div>
+      </section>
 
-    <!-- Filtro de sinistro -->
-    <div class="mb-4">
-      <label class="flex items-center text-sm font-medium text-gray-700">
-        <input v-model="filtros.semSinistro" type="checkbox" class="mr-2 rounded" />
-        Sem sinistro
-      </label>
-    </div>
-
-    <!-- Filtro de veículos ativos -->
-    <div class="mb-4">
-      <label class="flex items-center text-sm font-medium text-gray-700">
-        <input v-model="filtros.apenasAtivos" type="checkbox" class="mr-2 rounded" />
-        Apenas veículos ativos
-      </label>
-    </div>
-
-    <!-- Filtro de UF -->
-    <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">UF do pátio</label>
-      <select
-          v-model="filtros.patioUf"
-          class="w-full p-2 border rounded focus:ring focus:ring-blue-200"
-      >
-        <option value="">Todas</option>
-        <option value="DF">DF</option>
-        <option value="GO">GO</option>
-      </select>
+      <section class="rounded-lg border border-slate-200 p-3">
+        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Status e Localização</label>
+        <div class="space-y-2">
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input v-model="filtros.semSinistro" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+            Sem sinistro
+          </label>
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input v-model="filtros.apenasAtivos" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+            Apenas ativos
+          </label>
+          <select
+            v-model="filtros.patioUf"
+            class="w-full rounded-md border border-slate-300 px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          >
+            <option value="">Todas as UFs</option>
+            <option v-for="uf in ufs" :key="uf" :value="uf">{{ uf }}</option>
+          </select>
+        </div>
+      </section>
     </div>
 
     <button
-        @click="$emit('aplicar')"
-        class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
+      type="button"
+      class="mt-3 w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+      @click="$emit('resetar')"
     >
-      Aplicar Filtros
-    </button>
-
-    <button
-        @click="$emit('resetar')"
-        class="w-full mt-2 bg-gray-200 text-gray-700 py-2 px-4 rounded hover:bg-gray-300 transition"
-    >
-      Limpar Filtros
+      Limpar filtros
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
+
 interface Filtros {
   termoPesquisa: string;
   anoMin: number | null;
@@ -130,9 +125,20 @@ interface Filtros {
   patioUf: string;
 }
 
-defineProps<{
+const props = defineProps<{
   filtros: Filtros;
 }>();
 
-defineEmits(['aplicar', 'resetar']);
+defineEmits<{
+  resetar: [];
+}>();
+
+const ufs = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+];
+
+const anoInvalido = computed(() => props.filtros.anoMin !== null && props.filtros.anoMax !== null && props.filtros.anoMin > props.filtros.anoMax);
+const precoInvalido = computed(() => props.filtros.precoMin !== null && props.filtros.precoMax !== null && props.filtros.precoMin > props.filtros.precoMax);
+const kmInvalido = computed(() => props.filtros.kmMin !== null && props.filtros.kmMax !== null && props.filtros.kmMin > props.filtros.kmMax);
 </script>

@@ -20,7 +20,7 @@ Vehicle auction scraper and ranking tool (Brazilian market). Scrapes vehicle lis
 npm install              # Install dependencies
 npm run dev              # Dev server on http://localhost:3000
 npm run build            # Production build
-npx nuxi typecheck      # Run TypeScript type checking
+npx nuxi typecheck       # Run TypeScript type checking
 npx prisma migrate dev   # Run database migrations
 npx prisma generate      # Regenerate Prisma client after schema changes
 ```
@@ -40,16 +40,16 @@ app/
 │   ├── scrapperService.ts         # Client-side URL validation + API calls
 │   └── veiculoRankerService.ts    # Vehicle scoring (0-10) with weighted factors
 ├── components/
-│   ├── VeiculoCard.vue            # Vehicle card display
+│   ├── VeiculoCard.vue            # Vehicle card (kept for reuse outside index if needed)
 │   ├── VeiculoEditModal.vue       # Vehicle edit modal
-│   ├── FiltroVeiculos.vue         # Filter panel for vehicle listing
-│   ├── TabelaVeiculos.vue         # Vehicle table view
+│   ├── FiltroVeiculos.vue         # Auto-applied filter panel (desktop + mobile drawer usage)
+│   ├── TabelaVeiculos.vue         # Dense/sticky vehicle table view (single mode on index)
 │   └── scrapper/
 │       ├── ExtracacaoSequencial.vue  # Sequential extraction progress
 │       ├── ResultadosLote.vue        # Batch results table
 │       └── HistoricoExtracoes.vue    # Extraction history
 ├── pages/
-│   ├── index.vue                  # Vehicle listing with filters
+│   ├── index.vue                  # Vehicle listing (table-only, no cards toggle)
 │   ├── scrapper.vue               # Scraping interface (individual/listing/sequential)
 │   └── veiculo/[id].vue           # Vehicle detail page
 └── types/veiculo.ts               # Veiculo interface (core domain model)
@@ -64,7 +64,7 @@ server/
 │   │   ├── extract.post.ts            # Single vehicle extraction
 │   │   ├── extract-listing.post.ts    # Listing page extraction (get URLs)
 │   │   ├── extract-sequential.post.ts # Sequential extraction with Puppeteer
-│   │   └── batch.post.ts             # Batch extraction
+│   │   └── batch.post.ts              # Batch extraction
 │   └── veiculos/
 │       ├── index.get.ts               # List vehicles (filters + pagination)
 │       ├── [id].get.ts                # Get single vehicle
@@ -79,6 +79,16 @@ server/
     ├── veiculo-repository.ts          # DB operations (upsert, delete)
     └── prisma.ts                      # Prisma client singleton
 ```
+
+### Home UX Notes (`app/pages/index.vue`)
+
+- Home uses a **single dense table mode** (`TabelaVeiculos`) and no cards toggle.
+- Filter UX is **auto-apply**:
+  - debounce (~250ms) for search and numeric ranges
+  - immediate apply for toggles/select fields
+- Active filters are shown as removable chips.
+- Filters panel is collapsible on desktop and rendered as a drawer on mobile.
+- Current data strategy is still client-side (`/api/veiculos?limit=10000`) with local filtering/sorting.
 
 ### Scraping Pipeline
 

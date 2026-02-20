@@ -1,163 +1,231 @@
 <!-- components/TabelaVeiculos.vue -->
 <template>
-  <div class="bg-white rounded-lg shadow overflow-hidden">
-    <table class="min-w-full divide-y divide-gray-200">
-      <thead class="bg-gray-50">
-      <tr>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="$emit('ordenar', 'descricao')">
-          Veículo
-          <Icon
-              v-if="ordenacao.campo === 'descricao'"
-              :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
-              class="text-sm ml-1"
-          />
-        </th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="$emit('ordenar', 'ano')">
-          <div class="flex items-center">
-            Ano
-            <Icon v-if="ordenacao.campo === 'ano'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm ml-1" />
-          </div>
-        </th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="$emit('ordenar', 'quilometragem')">
-          <div class="flex items-center">
-            Quilometragem
-            <Icon v-if="ordenacao.campo === 'quilometragem'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm ml-1" />
-          </div>
-        </th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lance</th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Mercado</th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="$emit('ordenar', 'porcentagemMercado')">
-          <div class="flex items-center">
-            FIPE
-            <Icon v-if="ordenacao.campo === 'porcentagemMercado'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm ml-1" />
-          </div>
-        </th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="$emit('ordenar', 'lucroEstimado')">
-          <div class="flex items-center">
-            Lucro Est.
-            <Icon v-if="ordenacao.campo === 'lucroEstimado'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm ml-1" />
-          </div>
-        </th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          ROI
-        </th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="$emit('ordenar', 'score')">
-          <div class="flex items-center">
-            Score
-            <Icon v-if="ordenacao.campo === 'score'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm ml-1" />
-          </div>
-        </th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-      </tr>
-      </thead>
-      <tbody class="bg-white divide-y divide-gray-200">
-      <tr v-for="veiculo in veiculos" :key="veiculo.id" class="hover:bg-gray-50">
-        <td class="px-6 py-4 whitespace-nowrap">
-          <div class="flex items-center">
-            <span
-                class="w-5 h-5 flex items-center justify-center rounded-full text-white text-xs font-bold mr-2"
-                :class="getLeiloeiroClass(veiculo.leiloeiro)"
-                :title="veiculo.leiloeiro || 'Leiloeiro não especificado'"
-            >
-              {{ getLeiloeiroInitial(veiculo.leiloeiro) }}
-            </span>
-            <div class="relative">
-              <a :href="veiculo.urlOrigem" target="_blank" class="text-sm font-medium text-blue-600 hover:text-blue-800">
-                {{ veiculo.marca }} {{ veiculo.descricao }}
-              </a>
-              <span v-if="veiculo.sinistro" class="mr-1 text-red-500" title="Veículo com sinistro">🚨</span>
-              <span
-                  v-if="veiculo.patioUf"
-                  class="ml-2 inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold"
-                  :class="getPatioUfClass(veiculo.patioUf)"
-              >
-                {{ veiculo.patioUf }}
+  <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div class="max-h-[calc(100vh-14rem)] overflow-auto">
+      <table class="w-full min-w-[1120px] table-fixed divide-y divide-slate-200">
+        <thead class="sticky top-0 z-20 bg-slate-50">
+          <tr class="text-xs uppercase tracking-wide text-slate-600">
+            <th class="sticky left-0 z-30 w-[260px] bg-slate-50 px-3 py-2 text-left font-semibold">
+              <button type="button" class="flex items-center gap-1" @click="$emit('ordenar', 'descricao')">
+                Veículo
+                <Icon
+                  v-if="ordenacao.campo === 'descricao'"
+                  :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
+                  class="text-sm"
+                />
+              </button>
+            </th>
+            <th class="w-[72px] px-2 py-2 text-left font-semibold" :aria-sort="getAriaSort('ano')">
+              <button type="button" class="flex items-center gap-1" @click="$emit('ordenar', 'ano')">
+                Ano
+                <Icon v-if="ordenacao.campo === 'ano'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm" />
+              </button>
+            </th>
+            <th class="w-[112px] px-2 py-2 text-right font-semibold" :aria-sort="getAriaSort('quilometragem')">
+              <button type="button" class="ml-auto flex items-center gap-1" @click="$emit('ordenar', 'quilometragem')">
+                KM
+                <Icon v-if="ordenacao.campo === 'quilometragem'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm" />
+              </button>
+            </th>
+            <th class="w-[112px] px-2 py-2 text-right font-semibold">Lance</th>
+            <th class="w-[120px] px-2 py-2 text-right font-semibold" :aria-sort="getAriaSort('porcentagemMercado')">
+              <div class="flex items-center justify-end gap-2">
+                <span>Mercado /</span>
+                <button type="button" class="flex items-center gap-1" @click="$emit('ordenar', 'porcentagemMercado')">
+                  FIPE
+                  <Icon v-if="ordenacao.campo === 'porcentagemMercado'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm" />
+                </button>
+              </div>
+            </th>
+            <th class="w-[120px] px-2 py-2 text-right font-semibold" :aria-sort="getAriaSort('lucroEstimado')">
+              <div class="flex items-center justify-end gap-2">
+                <button type="button" class="flex items-center gap-1" @click="$emit('ordenar', 'lucroEstimado')">
+                  Lucro /
+                  <Icon v-if="ordenacao.campo === 'lucroEstimado'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm" />
+                </button>
+                <span>ROI</span>
+              </div>
+            </th>
+            <th class="w-[96px] px-2 py-2 text-center font-semibold" :aria-sort="getAriaSort('score')">
+              <button type="button" class="mx-auto flex items-center gap-1" @click="$emit('ordenar', 'score')">
+                Score
+                <Icon v-if="ordenacao.campo === 'score'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm" />
+              </button>
+            </th>
+            <th class="w-[80px] px-2 py-2 text-center font-semibold">Ações</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100 bg-white text-[13px] text-slate-700">
+          <tr v-for="veiculo in veiculos" :key="veiculo.id" class="transition hover:bg-slate-50">
+            <td class="sticky left-0 z-10 bg-white px-3 py-2 align-top">
+              <div class="flex items-start gap-2">
+                <span
+                  class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white"
+                  :class="getLeiloeiroClass(veiculo.leiloeiro)"
+                  :title="veiculo.leiloeiro || 'Leiloeiro não especificado'"
+                >
+                  {{ getLeiloeiroInitial(veiculo.leiloeiro) }}
+                </span>
+                <div class="min-w-0">
+                  <a
+                    :href="veiculo.urlOrigem"
+                    target="_blank"
+                    class="line-clamp-2 text-[15px] font-semibold text-blue-700 hover:text-blue-900"
+                  >
+                    {{ veiculo.marca }} {{ veiculo.descricao }}
+                  </a>
+                  <div class="mt-1 flex items-center gap-1.5 text-xs">
+                    <span v-if="veiculo.sinistro" class="rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-700">Sinistro</span>
+                    <span
+                      v-if="veiculo.patioUf"
+                      class="rounded px-1.5 py-0.5 font-semibold"
+                      :class="getPatioUfClass(veiculo.patioUf)"
+                    >
+                      {{ veiculo.patioUf }}
+                    </span>
+                    <span
+                      class="h-2 w-2 rounded-full"
+                      :class="veiculo.active ? 'bg-emerald-500' : 'bg-slate-400'"
+                      :title="veiculo.active ? 'Ativo' : 'Inativo'"
+                    />
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="px-2 py-2 align-top text-sm font-medium text-slate-800">{{ veiculo.ano }}</td>
+            <td class="px-2 py-2 text-right align-top text-sm text-slate-800">{{ veiculo.quilometragem.toLocaleString('pt-BR') }}</td>
+            <td class="px-2 py-2 text-right align-top text-sm font-medium text-slate-900">R$ {{ formatarValor(veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial) }}</td>
+            <td class="px-2 py-2 text-right align-top">
+              <div class="flex flex-row float-right items-end gap-1">
+                <span class="text-sm text-slate-800">R$ {{ formatarValor(veiculo.valorMercado) }}</span>
+                <span
+                  v-if="veiculo.valorMercado > 0"
+                  class="inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold"
+                  :class="getPercentageClass(getPorcentagemMercado(veiculo))"
+                  title="FIPE: percentual do lance em relacao ao valor de mercado"
+                >
+                  {{ getPorcentagemMercado(veiculo) }}%
+                </span>
+                <span v-else class="text-xs text-slate-400">--</span>
+              </div>
+            </td>
+            <td class="px-2 py-2 text-right align-top">
+              <div class="flex flex-row float-right items-end gap-1">
+                <span
+                  v-if="veiculo.valorMercado > 0"
+                  class="inline-flex rounded px-1.5 py-0.5 text-xs font-semibold"
+                  :class="getLucroClass(calcularLucroEstimado(veiculo))"
+                >
+                  R$ {{ formatarValor(calcularLucroEstimado(veiculo)) }}
+                </span>
+                <span v-else class="text-xs text-slate-400">--</span>
+                <span
+                  v-if="(veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial) > 0"
+                  class="inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold"
+                  :class="getRoiClass(calcularRoi(veiculo))"
+                  title="ROI: retorno sobre o investimento estimado"
+                >
+                  {{ calcularRoi(veiculo).toFixed(1) }}%
+                </span>
+                <span v-else class="text-xs text-slate-400">--</span>
+              </div>
+            </td>
+            <td class="px-2 py-2 text-center align-top">
+              <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold" :class="getScoreClass(getScore(veiculo))">
+                {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
               </span>
-              <span
-                  class="absolute h-1.5 w-1.5 rounded-full"
-                  :class="veiculo.active ? 'bg-green-500' : 'bg-gray-400'"
-                  :title="veiculo.active ? 'Ativo' : 'Inativo'"
-              ></span>
-            </div>
-          </div>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ veiculo.ano }}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ veiculo.quilometragem.toLocaleString('pt-BR') }} km</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {{ formatarValor(veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial) }}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ {{ formatarValor(veiculo.valorMercado) }}</td>
-        <td class="px-6 py-4 whitespace-nowrap">
-          <span v-if="veiculo.valorMercado > 0" class="px-2 py-1 text-xs font-medium rounded" :class="getPercentageClass(getPorcentagemMercado(veiculo))">
-            {{ getPorcentagemMercado(veiculo) }}%
-          </span>
-          <span v-else> -- </span>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap">
-          <span v-if="veiculo.valorMercado > 0" class="px-2 py-1 text-xs font-medium rounded" :class="getLucroClass(calcularLucroEstimado(veiculo))">
-            R$ {{ formatarValor(calcularLucroEstimado(veiculo)) }}
-          </span>
-          <span v-else> -- </span>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap">
-          <span
-            v-if="(veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial) > 0"
-            class="px-2 py-1 text-xs font-medium rounded"
-            :class="getRoiClass(calcularRoi(veiculo))"
-          >
-            {{ calcularRoi(veiculo).toFixed(1) }}%
-          </span>
-          <span v-else> -- </span>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap">
-          <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getScoreClass(getScore(veiculo))">
-            {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
-          </span>
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap">
-          <button
-              @click="$emit('atualizar', veiculo)"
-              class="text-emerald-600 hover:text-emerald-800 mr-2 disabled:opacity-50"
-              :disabled="refreshingId === veiculo.id"
-              title="Atualizar lote"
-          >
-            <Icon
-                :name="refreshingId === veiculo.id ? 'mdi:loading' : 'mdi:refresh'"
-                class="text-lg"
-                :class="{ 'animate-spin': refreshingId === veiculo.id }"
-            />
-          </button>
-          <button
-              @click="$emit('editar', veiculo)"
-              class="text-blue-600 hover:text-blue-800 mr-2"
-              title="Editar veículo"
-          >
-            <Icon name="mdi:pencil" class="text-lg" />
-          </button>
-        </td>
-      </tr>
-      </tbody>
-    </table>
+            </td>
+            <td class="px-2 py-2 text-center align-top">
+              <div class="flex items-center justify-center gap-1">
+                <button
+                  type="button"
+                  class="rounded p-1 text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  :disabled="refreshingId === veiculo.id"
+                  title="Atualizar lote"
+                  aria-label="Atualizar lote"
+                  @click="$emit('atualizar', veiculo)"
+                >
+                  <Icon
+                    :name="refreshingId === veiculo.id ? 'mdi:loading' : 'mdi:refresh'"
+                    class="text-base"
+                    :class="{ 'animate-spin': refreshingId === veiculo.id }"
+                  />
+                </button>
+                <button
+                  type="button"
+                  class="rounded p-1 text-blue-600 transition hover:bg-blue-50 hover:text-blue-700"
+                  title="Editar veículo"
+                  aria-label="Editar veículo"
+                  @click="$emit('editar', veiculo)"
+                >
+                  <Icon name="mdi:pencil" class="text-base" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { Veiculo } from '~/types/veiculo';
 
+type CampoOrdenacao = 'descricao' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'lucroEstimado' | 'score';
+
 const { formatarValor } = useFormatacao();
-const { getScore, getScoreClass, getScoreIcon, getPercentageClass, getPorcentagemMercado, calcularLucroEstimado, calcularRoi, getLucroClass, getRoiClass } = useVeiculoScore();
-const { getLeiloeiroInitial, getLeiloeiroClass } = useLeiloeiro();
+const {
+  calcularLucroEstimado,
+  calcularRoi,
+  getLeiloeiroClass,
+  getLeiloeiroInitial,
+  getLucroClass,
+  getPercentageClass,
+  getPorcentagemMercado,
+  getRoiClass,
+  getScore,
+  getScoreClass,
+  getScoreIcon
+} = {
+  ...useVeiculoScore(),
+  ...useLeiloeiro()
+};
 
 function getPatioUfClass(uf: string | undefined): string {
-  if (!uf) return 'bg-gray-100 text-gray-700';
-  if (uf === 'DF') return 'bg-blue-100 text-blue-800';
-  if (uf === 'GO') return 'bg-green-100 text-green-800';
-  return 'bg-gray-100 text-gray-700';
+  if (!uf) {
+    return 'bg-slate-100 text-slate-700';
+  }
+
+  if (uf === 'DF') {
+    return 'bg-blue-100 text-blue-800';
+  }
+
+  if (uf === 'GO') {
+    return 'bg-emerald-100 text-emerald-800';
+  }
+
+  return 'bg-slate-100 text-slate-700';
 }
 
-defineProps<{
+const props = defineProps<{
   veiculos: Veiculo[];
-  ordenacao: { campo: string; direcao: string };
+  ordenacao: { campo: CampoOrdenacao; direcao: 'asc' | 'desc' };
   refreshingId: string | null;
 }>();
 
-defineEmits(['ordenar', 'editar', 'atualizar']);
+function getAriaSort(campo: CampoOrdenacao): 'ascending' | 'descending' | 'none' {
+  if (props.ordenacao.campo !== campo) {
+    return 'none';
+  }
+
+  return props.ordenacao.direcao === 'asc' ? 'ascending' : 'descending';
+}
+
+defineEmits<{
+  ordenar: [campo: CampoOrdenacao];
+  editar: [veiculo: Veiculo];
+  atualizar: [veiculo: Veiculo];
+}>();
 </script>

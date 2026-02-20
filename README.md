@@ -54,12 +54,17 @@ Cada veiculo recebe uma nota de 0 a 10 baseada em fatores ponderados:
 | Tier da marca | 15% |
 | Historico de sinistro | 10% |
 
-### Listagem e Filtros
+### Listagem e Filtros (Home)
 
-- Filtros por marca, ano, preco, quilometragem e sinistro
-- Ordenacao por qualquer coluna
-- Paginacao
-- Edicao inline dos dados do veiculo
+- Home focada em **tabela unica** (modo cards descontinuado na pagina inicial)
+- Layout denso com **cabecalho sticky** e primeira coluna sticky
+- Filtros autoaplicaveis:
+  - debounce para busca e ranges (ano, lance e km)
+  - aplicacao imediata para toggles e UF
+- Chips de filtros ativos com remocao individual
+- Painel de filtros colapsavel no desktop e drawer no mobile
+- Ordenacao por colunas (descricao, ano, km, FIPE, lucro e score)
+- Atualizacao e edicao de veiculos diretamente na tabela
 
 ## Sites Suportados
 

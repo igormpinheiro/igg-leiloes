@@ -59,8 +59,8 @@ export function useVeiculoScore() {
     if (roiValue >= 45) return 'bg-green-500 text-white font-bold'
     if (roiValue >= 40) return 'bg-green-200 text-green-900'
     if (roiValue >= 35) return 'bg-blue-100 text-blue-800'
-    if (roiValue >= 20) return 'bg-yellow-100 text-yellow-800'
     if (roiValue >= 30) return 'bg-orange-100 text-orange-800'
+    if (roiValue >= 20) return 'bg-yellow-100 text-yellow-800'
     return 'bg-red-100 text-red-800'
   }
 
