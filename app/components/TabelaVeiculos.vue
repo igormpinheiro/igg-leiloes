@@ -24,7 +24,7 @@
             <Icon v-if="ordenacao.campo === 'quilometragem'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm ml-1" />
           </div>
         </th>
-        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lance</th>
         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Mercado</th>
         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="$emit('ordenar', 'porcentagemMercado')">
           <div class="flex items-center">
@@ -37,6 +37,9 @@
             Lucro Est.
             <Icon v-if="ordenacao.campo === 'lucroEstimado'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm ml-1" />
           </div>
+        </th>
+        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          ROI
         </th>
         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" @click="$emit('ordenar', 'score')">
           <div class="flex items-center">
@@ -95,6 +98,16 @@
           <span v-else> -- </span>
         </td>
         <td class="px-6 py-4 whitespace-nowrap">
+          <span
+            v-if="(veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial) > 0"
+            class="px-2 py-1 text-xs font-medium rounded"
+            :class="getRoiClass(calcularRoi(veiculo))"
+          >
+            {{ calcularRoi(veiculo).toFixed(1) }}%
+          </span>
+          <span v-else> -- </span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap">
           <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getScoreClass(getScore(veiculo))">
             {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
           </span>
@@ -130,7 +143,7 @@
 import type { Veiculo } from '~/types/veiculo';
 
 const { formatarValor } = useFormatacao();
-const { getScore, getScoreClass, getScoreIcon, getPercentageClass, getPorcentagemMercado, calcularLucroEstimado, getLucroClass } = useVeiculoScore();
+const { getScore, getScoreClass, getScoreIcon, getPercentageClass, getPorcentagemMercado, calcularLucroEstimado, calcularRoi, getLucroClass, getRoiClass } = useVeiculoScore();
 const { getLeiloeiroInitial, getLeiloeiroClass } = useLeiloeiro();
 
 function getPatioUfClass(uf: string | undefined): string {

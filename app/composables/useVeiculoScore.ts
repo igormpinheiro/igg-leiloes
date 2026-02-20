@@ -48,6 +48,31 @@ export function useVeiculoScore() {
     return valorVendaLiquido - custoTotal
   }
 
+  function calcularRoi(veiculo: Veiculo): number {
+    const investimento = veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial
+    if (!investimento || investimento <= 0) return 0
+    const lucroEstimado = calcularLucroEstimado(veiculo)
+    return (lucroEstimado / investimento) * 100
+  }
+
+  function getRoiClass(roiValue: number): string {
+    if (roiValue >= 45) return 'bg-green-500 text-white font-bold'
+    if (roiValue >= 40) return 'bg-green-200 text-green-900'
+    if (roiValue >= 35) return 'bg-blue-100 text-blue-800'
+    if (roiValue >= 20) return 'bg-yellow-100 text-yellow-800'
+    if (roiValue >= 30) return 'bg-orange-100 text-orange-800'
+    return 'bg-red-100 text-red-800'
+  }
+
+  function getRoiTextClass(roiValue: number): string {
+    if (roiValue >= 45) return 'text-white font-bold'
+    if (roiValue >= 40) return 'text-green-900 font-bold'
+    if (roiValue >= 35) return 'text-blue-600 font-bold'
+    if (roiValue >= 30) return 'text-yellow-600 font-bold'
+    if (roiValue >= 20) return 'text-orange-600 font-bold'
+    return 'text-red-600 font-bold'
+  }
+
   function getLucroClass(lucroValue: number): string {
     if (lucroValue >= lucro.excelente) return 'bg-green-100 text-green-800'
     if (lucroValue >= lucro.bom) return 'bg-blue-100 text-blue-800'
@@ -69,6 +94,9 @@ export function useVeiculoScore() {
     getPercentageClass,
     getPorcentagemMercado,
     calcularLucroEstimado,
+    calcularRoi,
+    getRoiClass,
+    getRoiTextClass,
     getLucroClass,
     getLucroTextClass,
   }

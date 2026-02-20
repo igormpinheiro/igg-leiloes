@@ -16,7 +16,7 @@
       <div class="p-4">
         <form @submit.prevent="salvarVeiculo">
           <!-- Summary Stats Row -->
-          <div class="bg-gray-50 p-3 mb-4 rounded-lg grid grid-cols-5 gap-4">
+          <div class="bg-gray-50 p-3 mb-4 rounded-lg grid grid-cols-6 gap-4">
             <!-- Score -->
             <div class="text-center">
               <div class="text-sm text-gray-600 mb-1">Score</div>
@@ -55,6 +55,21 @@
                     :class="getLucroTextClass(calcularLucroEstimado(veiculoEditado))"
                 >
                   {{ formatarValor(calcularLucroEstimado(veiculoEditado)) }}
+                </span>
+                <span v-else>--</span>
+              </div>
+            </div>
+
+            <!-- ROI -->
+            <div class="text-center">
+              <div class="text-sm text-gray-600 mb-1">ROI</div>
+              <div>
+                <span
+                    v-if="(veiculoEditado.lanceAtual > 0 ? veiculoEditado.lanceAtual : veiculoEditado.lanceInicial) > 0"
+                    class="px-2 py-1 text-sm font-medium rounded"
+                    :class="getRoiClass(calcularRoi(veiculoEditado))"
+                >
+                  {{ calcularRoi(veiculoEditado).toFixed(1) }}%
                 </span>
                 <span v-else>--</span>
               </div>
@@ -317,6 +332,16 @@
                       R$ {{ formatarValor(calcularLucroEstimado(veiculoEditado)) }}
                     </span>
                   </div>
+                  <div class="flex justify-between text-sm">
+                    <span>ROI:</span>
+                    <span
+                        v-if="(veiculoEditado.lanceAtual > 0 ? veiculoEditado.lanceAtual : veiculoEditado.lanceInicial) > 0"
+                        :class="getRoiTextClass(calcularRoi(veiculoEditado))"
+                    >
+                      {{ calcularRoi(veiculoEditado).toFixed(1) }}%
+                    </span>
+                    <span v-else>--</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -349,7 +374,7 @@ import type { Veiculo } from '~/types/veiculo';
 import { CONFIG_NEGOCIO } from '~/config/negocio';
 
 const { formatarValor } = useFormatacao();
-const { getScore, getScoreClass, getScoreIcon, getPercentageClass, getPorcentagemMercado, calcularLucroEstimado, getLucroTextClass } = useVeiculoScore();
+const { getScore, getScoreClass, getScoreIcon, getPercentageClass, getPorcentagemMercado, calcularLucroEstimado, calcularRoi, getLucroTextClass, getRoiClass, getRoiTextClass } = useVeiculoScore();
 
 const props = defineProps<{
   isOpen: boolean;
