@@ -15,5 +15,7 @@ export default <Config>{
     'text-orange-800',
     'bg-red-100',
     'text-red-800',
+    'bg-purple-500',
+    'bg-orange-500'
   ],
 }
