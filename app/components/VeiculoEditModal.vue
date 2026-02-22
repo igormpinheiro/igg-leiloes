@@ -22,13 +22,13 @@
             <div class="text-center">
               <div class="mb-1 text-sm text-gray-600">% Mercado</div>
               <span v-if="veiculoEditado.valorMercado > 0" class="rounded px-2 py-1 text-sm font-medium" :class="getPercentageClass(getPorcentagemMercado(veiculoEditado))">
-                {{ getPorcentagemMercado(veiculoEditado) }}%
+                {{ Math.round(getPorcentagemMercado(veiculoEditado)) }}%
               </span>
               <span v-else>--</span>
             </div>
             <div class="text-center">
               <div class="mb-1 text-sm text-gray-600">Lucro Est.</div>
-              <span v-if="veiculoEditado.valorMercado > 0" class="rounded px-2 py-1 text-sm font-medium" :class="getLucroTextClass(calcularLucroEstimado(veiculoEditado))">
+              <span v-if="veiculoEditado.valorMercado > 0" class="rounded px-2 py-1 text-sm font-medium" :class="getLucroTextClass(calcularRoi(veiculoEditado))">
                 {{ formatarValor(calcularLucroEstimado(veiculoEditado)) }}
               </span>
               <span v-else>--</span>
@@ -126,12 +126,14 @@
               <div>
                 <h4 class="mb-2 text-sm font-medium text-gray-700">Custos</h4>
                 <ul class="space-y-1 text-sm">
-                  <li class="flex justify-between"><span>Lance:</span><span>R$ {{ formatarValor(lanceBase) }}</span></li>
-                  <li class="flex justify-between"><span>Taxa ({{ taxas.comissao }}%):</span><span>R$ {{ formatarValor(valorTaxaLeiloeiro) }}</span></li>
-                  <li class="flex justify-between"><span>Taxa administrativa:</span><span>R$ {{ formatarValor(taxas.taxaAdm) }}</span></li>
-                  <li class="flex justify-between"><span>Despachante:</span><span>R$ {{ formatarValor(taxas.taxaDespachante) }}</span></li>
-                  <li class="flex justify-between"><span>Vistoria:</span><span>R$ {{ formatarValor(taxas.taxaVistoria) }}</span></li>
-                  <li class="flex justify-between border-t border-blue-200 pt-1 font-medium"><span>Total Custos:</span><span>R$ {{ formatarValor(custoTotal) }}</span></li>
+                  <li class="flex justify-between"><span>Lance:</span><span>R$ {{ formatarValor(breakdown.lance) }}</span></li>
+                  <li class="flex justify-between"><span>Comissão leiloeiro:</span><span>R$ {{ formatarValor(breakdown.custos.comissaoLeilao) }}</span></li>
+                  <li class="flex justify-between"><span>Taxa administrativa:</span><span>R$ {{ formatarValor(breakdown.custos.taxaAdm) }}</span></li>
+                  <li class="flex justify-between"><span>Despachante:</span><span>R$ {{ formatarValor(breakdown.custos.taxaDespachante) }}</span></li>
+                  <li class="flex justify-between"><span>Vistoria:</span><span>R$ {{ formatarValor(breakdown.custos.taxaVistoria) }}</span></li>
+                  <li class="flex justify-between"><span>Frete:</span><span>R$ {{ formatarValor(breakdown.custos.frete) }}</span></li>
+                  <li class="flex justify-between"><span>IPVA estimado:</span><span>R$ {{ formatarValor(breakdown.custos.ipva) }}</span></li>
+                  <li class="flex justify-between border-t border-blue-200 pt-1 font-medium"><span>Total Custos:</span><span>R$ {{ formatarValor(breakdown.custoTotal) }}</span></li>
                 </ul>
               </div>
 
@@ -139,18 +141,18 @@
                 <h4 class="mb-2 text-sm font-medium text-gray-700">Venda</h4>
                 <ul class="space-y-1 text-sm">
                   <li class="flex justify-between"><span>Valor de Mercado:</span><span>R$ {{ formatarValor(veiculoEditado.valorMercado) }}</span></li>
-                  <li class="flex justify-between"><span>Comissão ({{ comissaoPercent }}%):</span><span>R$ {{ formatarValor(veiculoEditado.valorMercado * CONFIG_NEGOCIO.comissaoVenda) }}</span></li>
-                  <li class="flex justify-between border-t border-blue-200 pt-1 font-medium"><span>Valor Líquido:</span><span>R$ {{ formatarValor(valorLiquido) }}</span></li>
+                  <li class="flex justify-between"><span>Deságio aplicado ({{ (breakdown.desagioAplicado * 100).toFixed(1) }}%):</span><span>R$ {{ formatarValor(veiculoEditado.valorMercado * breakdown.desagioAplicado) }}</span></li>
+                  <li class="flex justify-between border-t border-blue-200 pt-1 font-medium"><span>Valor Líquido:</span><span>R$ {{ formatarValor(breakdown.valorVendaLiquido) }}</span></li>
                 </ul>
               </div>
 
               <div class="rounded-lg bg-blue-100 p-3">
                 <h4 class="mb-2 text-sm font-medium text-gray-700">Resultado</h4>
                 <div class="space-y-2">
-                  <div class="flex justify-between text-sm"><span>Valor Líquido:</span><span>R$ {{ formatarValor(valorLiquido) }}</span></div>
-                  <div class="flex justify-between text-sm"><span>Total Custos:</span><span>R$ {{ formatarValor(custoTotal) }}</span></div>
-                  <div class="flex justify-between border-t border-blue-300 pt-2 font-medium"><span>Lucro Estimado:</span><span :class="getLucroTextClass(calcularLucroEstimado(veiculoEditado))">R$ {{ formatarValor(calcularLucroEstimado(veiculoEditado)) }}</span></div>
-                  <div class="flex justify-between text-sm"><span>ROI:</span><span :class="getRoiTextClass(calcularRoi(veiculoEditado))">{{ calcularRoi(veiculoEditado).toFixed(1) }}%</span></div>
+                  <div class="flex justify-between text-sm"><span>Valor Líquido:</span><span>R$ {{ formatarValor(breakdown.valorVendaLiquido) }}</span></div>
+                  <div class="flex justify-between text-sm"><span>Total Custos:</span><span>R$ {{ formatarValor(breakdown.custoTotal) }}</span></div>
+                  <div class="flex justify-between border-t border-blue-300 pt-2 font-medium"><span>Lucro Estimado:</span><span :class="getLucroTextClass(breakdown.roiAjustado)">R$ {{ formatarValor(breakdown.lucroProjetado) }}</span></div>
+                  <div class="flex justify-between text-sm"><span>ROI:</span><span :class="getRoiTextClass(breakdown.roiAjustado)">{{ breakdown.roiAjustado.toFixed(1) }}%</span></div>
                 </div>
               </div>
             </div>
@@ -170,11 +172,11 @@
 import { computed, reactive, watch } from 'vue';
 import type { Veiculo } from '~/types/veiculo';
 import { TipoSinistro } from '~/types/veiculo';
-import { CONFIG_NEGOCIO } from '~/config/negocio';
 
 const { formatarValor } = useFormatacao();
 const { calcularActive } = useDataLeilao();
 const {
+  getBreakdown,
   getScore,
   getScoreClass,
   getScoreIcon,
@@ -195,7 +197,6 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'save']);
 
 const opcoesSinistro = Object.values(TipoSinistro);
-const comissaoPercent = CONFIG_NEGOCIO.comissaoVenda * 100;
 
 const veiculoEditado = reactive<Veiculo>({
   id: '',
@@ -223,28 +224,7 @@ watch(() => props.veiculo, (novoVeiculo) => {
 }, { immediate: true });
 
 const ativoCalculado = computed(() => calcularActive(veiculoEditado.dataLeilao));
-const lanceBase = computed(() => veiculoEditado.lanceAtual > 0 ? veiculoEditado.lanceAtual : veiculoEditado.lanceInicial);
-
-const taxas = computed(() => ({
-  comissao: veiculoEditado.leiloeiro?.comissao ?? 5,
-  taxaAdm: veiculoEditado.leiloeiro?.taxaAdm ?? 1700,
-  taxaDespachante: veiculoEditado.leiloeiro?.taxaDespachante ?? 0,
-  taxaVistoria: veiculoEditado.leiloeiro?.taxaVistoria ?? 0,
-}));
-
-const valorTaxaLeiloeiro = computed(() => lanceBase.value * (taxas.value.comissao / 100));
-
-const custoTotal = computed(() =>
-  lanceBase.value
-  + valorTaxaLeiloeiro.value
-  + taxas.value.taxaAdm
-  + taxas.value.taxaDespachante
-  + taxas.value.taxaVistoria,
-);
-
-const valorLiquido = computed(() =>
-  veiculoEditado.valorMercado - (veiculoEditado.valorMercado * CONFIG_NEGOCIO.comissaoVenda),
-);
+const breakdown = computed(() => getBreakdown(veiculoEditado));
 
 function fecharModal() {
   emit('close');

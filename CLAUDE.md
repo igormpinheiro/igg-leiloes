@@ -68,7 +68,6 @@ app/
 │   ├── scrapperService.ts
 │   └── veiculoRankerService.ts
 ├── components/
-│   ├── VeiculoCard.vue
 │   ├── VeiculoEditModal.vue
 │   ├── FiltroVeiculos.vue
 │   ├── TabelaVeiculos.vue
@@ -129,6 +128,22 @@ server/
 - Client-side strategy remains `GET /api/veiculos?limit=10000` and local sorting/filtering.
 - Added filter by `leiloeiroId`.
 - `active` is computed, not persisted.
+- Score explainability in `TabelaVeiculos`:
+  - Hover/focus (desktop) and tap (mobile) on score badge opens technical breakdown tooltip.
+  - Tooltip shows score components (ROI/profit/km/brand/data quality), weights, risk-adjusted metrics, and gate penalties.
+
+## Scoring Notes
+
+- Canonical logic lives in `app/services/veiculoRankerService.ts` (`calcularBreakdown`).
+- `useVeiculoScore` provides UI helpers plus explanation helpers:
+  - `getScoreExplicacao(veiculo)` for detailed score rationale.
+  - `getScoreBreakdown(veiculo)` for raw breakdown access.
+- Current weights from `CONFIG_NEGOCIO.pesos`:
+  - ROI: 0.4
+  - Absolute profit: 0.2
+  - Mileage: 0.2
+  - Brand: 0.1
+  - Data quality: 0.1
 
 ## Adding a New Auction Site
 

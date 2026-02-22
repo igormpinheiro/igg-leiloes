@@ -83,25 +83,28 @@
             </div>
           </div>
 
-          <div class="mt-8 rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div v-if="breakdown" class="mt-8 rounded-lg border border-blue-200 bg-blue-50 p-4">
             <h2 class="mb-4 border-b border-blue-200 pb-2 text-xl font-semibold">Estimativa de Lucro</h2>
             <div class="space-y-3">
               <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <p class="text-sm text-gray-500">Custos Estimados:</p>
                   <ul class="mt-1 space-y-1">
-                    <li>Lance Base: R$ {{ formatarValor(lanceBase) }}</li>
-                    <li>Taxa Leiloeiro ({{ taxas.comissao }}%): R$ {{ formatarValor(valorTaxaLeiloeiro) }}</li>
-                    <li>Taxa Administrativa: R$ {{ formatarValor(taxas.taxaAdm) }}</li>
-                    <li>Despachante: R$ {{ formatarValor(taxas.taxaDespachante) }}</li>
-                    <li>Vistoria: R$ {{ formatarValor(taxas.taxaVistoria) }}</li>
+                    <li>Lance Base: R$ {{ formatarValor(breakdown.lance) }}</li>
+                    <li>Comissão Leiloeiro: R$ {{ formatarValor(breakdown.custos.comissaoLeilao) }}</li>
+                    <li>Taxa Administrativa: R$ {{ formatarValor(breakdown.custos.taxaAdm) }}</li>
+                    <li>Despachante: R$ {{ formatarValor(breakdown.custos.taxaDespachante) }}</li>
+                    <li>Vistoria: R$ {{ formatarValor(breakdown.custos.taxaVistoria) }}</li>
+                    <li>Frete: R$ {{ formatarValor(breakdown.custos.frete) }}</li>
+                    <li>IPVA estimado: R$ {{ formatarValor(breakdown.custos.ipva) }}</li>
                   </ul>
                 </div>
                 <div>
                   <p class="text-sm text-gray-500">Vendas:</p>
                   <ul class="mt-1 space-y-1">
                     <li>Valor de Mercado: R$ {{ formatarValor(veiculo.valorMercado) }}</li>
-                    <li>Comissão ({{ CONFIG_NEGOCIO.comissaoVenda * 100 }}%): R$ {{ formatarValor(veiculo.valorMercado * CONFIG_NEGOCIO.comissaoVenda) }}</li>
+                    <li>Deságio aplicado ({{ (breakdown.desagioAplicado * 100).toFixed(1) }}%): R$ {{ formatarValor(veiculo.valorMercado * breakdown.desagioAplicado) }}</li>
+                    <li>Valor Líquido Projetado: R$ {{ formatarValor(breakdown.valorVendaLiquido) }}</li>
                   </ul>
                 </div>
               </div>
@@ -109,8 +112,8 @@
               <div class="mt-4 border-t border-blue-200 pt-3">
                 <div class="flex items-center justify-between">
                   <span class="font-semibold">Lucro Estimado:</span>
-                  <span class="text-lg font-bold" :class="getLucroTextClass(calcularLucroEstimado(veiculo))">
-                    R$ {{ formatarValor(calcularLucroEstimado(veiculo)) }}
+                  <span class="text-lg font-bold" :class="getLucroTextClass(breakdown.roiAjustado)">
+                    R$ {{ formatarValor(breakdown.lucroProjetado) }}
                   </span>
                 </div>
               </div>
@@ -125,10 +128,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { scrapperService } from '~/services/scrapperService';
-import { CONFIG_NEGOCIO } from '~/config/negocio';
 
 const { formatarValor } = useFormatacao();
-const { getScore, getScoreClass, getScoreIcon, calcularLucroEstimado, getLucroTextClass } = useVeiculoScore();
+const { getBreakdown, getScore, getScoreClass, getScoreIcon, getLucroTextClass } = useVeiculoScore();
 
 const route = useRoute();
 const id = computed(() => route.params.id);
@@ -148,20 +150,7 @@ const { data: response, pending, error, refresh } = await useFetch(`/api/veiculo
 
 const veiculo = computed(() => response.value);
 const isRefreshing = ref(false);
-
-const lanceBase = computed(() => {
-  if (!veiculo.value) return 0;
-  return veiculo.value.lanceAtual > 0 ? veiculo.value.lanceAtual : veiculo.value.lanceInicial;
-});
-
-const taxas = computed(() => ({
-  comissao: veiculo.value?.leiloeiro?.comissao ?? 5,
-  taxaAdm: veiculo.value?.leiloeiro?.taxaAdm ?? 1700,
-  taxaDespachante: veiculo.value?.leiloeiro?.taxaDespachante ?? 0,
-  taxaVistoria: veiculo.value?.leiloeiro?.taxaVistoria ?? 0,
-}));
-
-const valorTaxaLeiloeiro = computed(() => lanceBase.value * (taxas.value.comissao / 100));
+const breakdown = computed(() => (veiculo.value ? getBreakdown(veiculo.value) : null));
 
 function getEconomiaClass(economia: number): string {
   if (economia >= 30000) return 'text-green-600';

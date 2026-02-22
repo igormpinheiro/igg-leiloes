@@ -56,11 +56,16 @@ Cada veiculo recebe nota de 0 a 10 com pesos:
 
 | Fator | Peso |
 |---|---|
-| Lucro bruto estimado | 35% |
-| Porcentagem de lucro | 25% |
+| ROI ajustado por risco | 40% |
+| Lucro absoluto ajustado | 20% |
 | Quilometragem | 20% |
-| Tier da marca | 15% |
-| Historico de sinistro | 10% |
+| Tier da marca | 10% |
+| Qualidade dos dados (lance/mercado) | 10% |
+
+- O score usa `scoreBase * 10` com penalidades (`gates`) de `-2`:
+  - ROI ajustado abaixo do minimo (`CONFIG_NEGOCIO.roi.regular`)
+  - dados financeiros insuficientes (sem lance ou sem valor de mercado)
+- A camada de risco considera sinistro, flags de descricao e incerteza de km.
 
 ### Home (tabela e filtros)
 
@@ -72,6 +77,10 @@ Cada veiculo recebe nota de 0 a 10 com pesos:
 - Filtro sem sinistro baseado em `TipoSinistro.Nenhum`
 - Ordenacao por `modelo`, ano, km, FIPE, lucro e score
 - `active` calculado no carregamento/resposta da API
+- Score com explicacao tecnica na tabela (`TabelaVeiculos`):
+  - desktop: hover/focus no badge de score
+  - mobile: toque no badge abre/fecha
+  - detalhes: componentes do score, pesos, risco total e penalidades aplicadas
 
 ## Sites suportados
 
