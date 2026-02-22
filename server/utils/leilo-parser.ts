@@ -1,6 +1,6 @@
 import { parse, HTMLElement } from 'node-html-parser';
 import { TipoSinistro, type Veiculo } from '~/types/veiculo';
-import { extrairValorNumerico, processarDescricao } from './parser-base';
+import { extrairValorNumerico, processarMarcaModelo } from './parser-base';
 
 /**
  * Parser para leilo.com.br
@@ -20,7 +20,7 @@ export class LeiloParser {
         return null;
       }
 
-      const { marca, modelo } = processarDescricao(descricaoCompleta, jsonLdData?.marca);
+      const { marca, modelo } = processarMarcaModelo(descricaoCompleta, jsonLdData?.marca);
       const ano = jsonLdData?.ano || this.extrairAno(root);
       const quilometragem = jsonLdData?.quilometragem && jsonLdData.quilometragem > 0
         ? jsonLdData.quilometragem

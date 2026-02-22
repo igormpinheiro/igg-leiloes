@@ -42,47 +42,55 @@ export function extrairValorNumerico(texto: string): number {
 }
 
 /**
- * Processa a descrição completa do veículo para separar marca e modelo.
+ * Remove padrões de ano (ex: "2013/2013", "2019/2020", "2022") do texto.
  */
-export function processarDescricao(descricaoCompleta: string, marcaExterna?: string): { marca: string; modelo: string } {
+function removerAno(texto: string): string {
+  return texto
+    .replace(/\b(19|20)\d{2}\/(19|20)\d{2}\b/g, '')
+    .replace(/\b(19|20)\d{2}\b/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
+ * Processa a descrição completa do veículo para separar marca e modelo.
+ * Remove prefixo "I/" (importado), identifica a marca por lista conhecida
+ * e remove padrões de ano do modelo.
+ */
+export function processarMarcaModelo(descricaoCompleta: string, marcaExterna?: string): { marca: string; modelo: string } {
   let marca = marcaExterna || '';
-  let modelo = descricaoCompleta;
+  let texto = descricaoCompleta.trim();
+
+  // Remove prefixo "I/" (indicador de importado)
+  texto = texto.replace(/^I\//, '').trim();
 
   if (marcaExterna) {
     const regex = new RegExp(`^${marcaExterna}[\\s\\/\\-]+`, 'i');
-    modelo = modelo.replace(regex, '').trim();
-    modelo = modelo.replace(/^Leilão\s+de\s+\w+\s+/i, '').trim();
-    return { marca: marcaExterna, modelo };
+    const modelo = texto.replace(regex, '').replace(/^Leilão\s+de\s+\w+\s+/i, '').trim();
+    return { marca: marcaExterna, modelo: removerAno(modelo) };
   }
 
-  if (descricaoCompleta.includes('/')) {
-    const partes = descricaoCompleta.split('/');
-    marca = (partes[0] || '').trim();
-    if (partes.length > 1) {
-      modelo = partes.slice(1).join('/').trim();
-      return { marca, modelo };
-    }
-  }
+  const textoUpper = texto.toUpperCase();
 
-  for (const marcaConhecida of MARCAS_CONHECIDAS) {
-    if (descricaoCompleta.toUpperCase().startsWith(marcaConhecida)) {
+  // Tenta encontrar marca conhecida no início da descrição
+  // Ordena por tamanho decrescente para priorizar matches mais específicos (ex: "LAND ROVER" antes de "LR")
+  const marcasOrdenadas = [...MARCAS_CONHECIDAS].sort((a, b) => b.length - a.length);
+
+  for (const marcaConhecida of marcasOrdenadas) {
+    if (textoUpper.startsWith(marcaConhecida)) {
       marca = marcaConhecida;
-      modelo = descricaoCompleta.substring(marcaConhecida.length).trim();
-      modelo = modelo.replace(/^[\s\-\/]+/, '');
-      return { marca, modelo };
-    }
-
-    if (!marca && descricaoCompleta.toUpperCase().includes(marcaConhecida)) {
-      marca = marcaConhecida;
+      const modelo = texto.substring(marcaConhecida.length).replace(/^[\s\-\/]+/, '').trim();
+      return { marca, modelo: removerAno(modelo) };
     }
   }
 
-  if (!marca && descricaoCompleta.includes(' ')) {
-    const partes = descricaoCompleta.split(' ');
-    marca = partes[0] || '';
-    modelo = partes.slice(1).join(' ');
+  // Fallback: primeira palavra como marca
+  if (texto.includes(' ')) {
+    const partes = texto.split(' ');
+    marca = (partes[0] || '').replace(/^\*+\s*/, '');
+    const modelo = partes.slice(1).join(' ');
+    return { marca, modelo: removerAno(modelo) };
   }
 
-  marca = marca.replace(/^\*+\s*/, '');
-  return { marca, modelo };
+  return { marca: texto.replace(/^\*+\s*/, ''), modelo: removerAno(texto) };
 }

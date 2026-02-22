@@ -1,6 +1,6 @@
 import { parse, HTMLElement } from 'node-html-parser';
 import { TipoSinistro, type Veiculo } from '~/types/veiculo';
-import { extrairValorNumerico, processarDescricao } from './parser-base';
+import { extrairValorNumerico, processarMarcaModelo } from './parser-base';
 
 /**
  * Parser para parquedosleiloes.com.br
@@ -11,7 +11,7 @@ export class LeilaoParser {
       const root = parse(html);
 
       const descricaoCompleta = this.extrairTitulo(root);
-      const { marca, modelo } = processarDescricao(descricaoCompleta);
+      const { marca, modelo } = processarMarcaModelo(descricaoCompleta);
       const descricao = this.extrairDescricaoLivre(root);
       const sinistro = this.extrairSinistro(root, descricao);
 
@@ -90,12 +90,9 @@ export class LeilaoParser {
 
   private static mapearSinistro(texto: string): TipoSinistro {
     const upper = texto.toUpperCase();
-
-    if (upper.includes('SUCATA')) return TipoSinistro.Sucata;
-    if (upper.includes('GRANDE MONTA')) return TipoSinistro.GrandeMonta;
-    if (upper.includes('PEQUENA MONTA')) return TipoSinistro.PequenaMonta;
-    if (upper.includes('MEDIA MONTA') || upper.includes('MÉDIA MONTA')) return TipoSinistro.MediaMonta;
-
+    if (upper.includes('INDICIO DE SINISTRO') || upper.includes('INDÍCIO DE SINISTRO')) {
+      return TipoSinistro.IndicioSinistro;
+    }
     if (
       upper.includes('RECUPERADO DE SINISTRO')
       || upper.includes('SINISTRO RECUPERADO')
@@ -104,11 +101,10 @@ export class LeilaoParser {
     ) {
       return TipoSinistro.RecuperadoSinistro;
     }
-
-    if (upper.includes('INDICIO DE SINISTRO') || upper.includes('INDÍCIO DE SINISTRO')) {
-      return TipoSinistro.IndicioSinistro;
-    }
-
+    if (upper.includes('MEDIA MONTA') || upper.includes('MÉDIA MONTA')) return TipoSinistro.MediaMonta;
+    if (upper.includes('PEQUENA MONTA')) return TipoSinistro.PequenaMonta;
+    if (upper.includes('GRANDE MONTA')) return TipoSinistro.GrandeMonta;
+    if (upper.includes('SUCATA')) return TipoSinistro.Sucata;
     return TipoSinistro.Nenhum;
   }
 
