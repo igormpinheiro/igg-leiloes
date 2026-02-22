@@ -1,4 +1,3 @@
-<!-- components/FiltroVeiculos.vue -->
 <template>
   <div class="p-4">
     <div class="mb-3">
@@ -12,7 +11,7 @@
         <input
           v-model="filtros.termoPesquisa"
           type="text"
-          placeholder="Descrição ou marca"
+          placeholder="Modelo ou marca"
           class="w-full rounded-md border border-slate-300 px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         />
       </section>
@@ -88,6 +87,17 @@
             <input v-model="filtros.apenasAtivos" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
             Apenas ativos
           </label>
+
+          <select
+            v-model.number="filtros.leiloeiroId"
+            class="w-full rounded-md border border-slate-300 px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          >
+            <option :value="null">Todos os leiloeiros</option>
+            <option v-for="leiloeiro in leiloeiros" :key="leiloeiro.id" :value="leiloeiro.id">
+              {{ leiloeiro.descricao }}
+            </option>
+          </select>
+
           <select
             v-model="filtros.patioUf"
             class="w-full rounded-md border border-slate-300 px-2.5 py-2 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
@@ -111,6 +121,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import type { Leiloeiro } from '~/types/veiculo';
 
 interface Filtros {
   termoPesquisa: string;
@@ -122,11 +133,13 @@ interface Filtros {
   kmMax: number | null;
   semSinistro: boolean;
   apenasAtivos: boolean;
+  leiloeiroId: number | null;
   patioUf: string;
 }
 
 const props = defineProps<{
   filtros: Filtros;
+  leiloeiros: Leiloeiro[];
 }>();
 
 defineEmits<{
@@ -135,7 +148,7 @@ defineEmits<{
 
 const ufs = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
 ];
 
 const anoInvalido = computed(() => props.filtros.anoMin !== null && props.filtros.anoMax !== null && props.filtros.anoMin > props.filtros.anoMax);

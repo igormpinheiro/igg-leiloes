@@ -1,15 +1,14 @@
-<!-- components/TabelaVeiculos.vue -->
 <template>
   <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
     <div class="max-h-[calc(100vh-14rem)] overflow-auto">
       <table class="w-full min-w-[1120px] table-fixed divide-y divide-slate-200">
         <thead class="sticky top-0 z-20 bg-slate-50">
           <tr class="text-xs uppercase tracking-wide text-slate-600">
-            <th class="sticky left-0 z-30 w-[260px] bg-slate-50 px-3 py-2 text-left font-semibold">
-              <button type="button" class="flex items-center gap-1" @click="$emit('ordenar', 'descricao')">
+            <th class="sticky left-0 z-30 w-[280px] bg-slate-50 px-3 py-2 text-left font-semibold">
+              <button type="button" class="flex items-center gap-1" @click="$emit('ordenar', 'modelo')">
                 Veículo
                 <Icon
-                  v-if="ordenacao.campo === 'descricao'"
+                  v-if="ordenacao.campo === 'modelo'"
                   :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'"
                   class="text-sm"
                 />
@@ -63,7 +62,7 @@
                 <span
                   class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white"
                   :class="getLeiloeiroClass(veiculo.leiloeiro)"
-                  :title="veiculo.leiloeiro || 'Leiloeiro não especificado'"
+                  :title="veiculo.leiloeiro?.descricao || 'Leiloeiro não especificado'"
                 >
                   {{ getLeiloeiroInitial(veiculo.leiloeiro) }}
                 </span>
@@ -73,10 +72,16 @@
                     target="_blank"
                     class="line-clamp-2 text-[15px] font-semibold text-blue-700 hover:text-blue-900"
                   >
-                    {{ veiculo.marca }} {{ veiculo.descricao }}
+                    {{ veiculo.marca }} {{ veiculo.modelo }}
                   </a>
-                  <div class="mt-1 flex items-center gap-1.5 text-xs">
-                    <span v-if="veiculo.sinistro" class="rounded bg-red-100 px-1.5 py-0.5 font-semibold text-red-700">Sinistro</span>
+                  <div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+                    <span
+                      v-if="veiculo.sinistro !== 'Nenhum'"
+                      class="rounded px-1.5 py-0.5 font-semibold"
+                      :class="getSinistroClass(veiculo.sinistro)"
+                    >
+                      {{ getSinistroLabel(veiculo.sinistro) }}
+                    </span>
                     <span
                       v-if="veiculo.patioUf"
                       class="rounded px-1.5 py-0.5 font-semibold"
@@ -85,25 +90,43 @@
                       {{ veiculo.patioUf }}
                     </span>
                     <span
-                      class="h-2 w-2 rounded-full"
-                      :class="veiculo.active ? 'bg-emerald-500' : 'bg-slate-400'"
-                      :title="veiculo.active ? 'Ativo' : 'Inativo'"
-                    />
+                      v-if="!veiculo.active"
+                      class="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-700"
+                    >
+                      Inativo
+                    </span>
+                    <span
+                      v-if="temProblemaMotor(veiculo.descricao)"
+                      class="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600 line-through"
+                    >
+                      Motor
+                    </span>
+                    <span
+                      v-if="temProblemaChave(veiculo.descricao)"
+                      class="rounded bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-600 line-through"
+                    >
+                      Chave
+                    </span>
                   </div>
                 </div>
               </div>
             </td>
             <td class="px-2 py-2 align-top text-sm font-medium text-slate-800">{{ veiculo.ano }}</td>
-            <td class="px-2 py-2 text-right align-top text-sm text-slate-800">{{ veiculo.quilometragem.toLocaleString('pt-BR') }}</td>
+            <td class="px-2 py-2 text-right align-top text-sm text-slate-800">
+              <span v-if="veiculo.quilometragem > 0">{{ veiculo.quilometragem.toLocaleString('pt-BR') }}</span>
+              <span v-else>
+                {{ VeiculoRanker.estimarQuilometragem(veiculo).toLocaleString('pt-BR') }}*
+              </span>
+            </td>
             <td class="px-2 py-2 text-right align-top text-sm font-medium text-slate-900">R$ {{ formatarValor(veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial) }}</td>
             <td class="px-2 py-2 text-right align-top">
-              <div class="flex flex-row float-right items-end gap-1">
+              <div class="flex float-right flex-row items-end gap-1">
                 <span class="text-sm text-slate-800">R$ {{ formatarValor(veiculo.valorMercado) }}</span>
                 <span
                   v-if="veiculo.valorMercado > 0"
                   class="inline-flex rounded px-1.5 py-0.5 text-[11px] font-semibold"
                   :class="getPercentageClass(getPorcentagemMercado(veiculo))"
-                  title="FIPE: percentual do lance em relacao ao valor de mercado"
+                  title="FIPE: percentual do lance em relação ao valor de mercado"
                 >
                   {{ getPorcentagemMercado(veiculo) }}%
                 </span>
@@ -111,7 +134,7 @@
               </div>
             </td>
             <td class="px-2 py-2 text-right align-top">
-              <div class="flex flex-row float-right items-end gap-1">
+              <div class="flex float-right flex-row items-end gap-1">
                 <span
                   v-if="veiculo.valorMercado > 0"
                   class="inline-flex rounded px-1.5 py-0.5 text-xs font-semibold"
@@ -171,9 +194,10 @@
 </template>
 
 <script setup lang="ts">
-import type { Veiculo } from '~/types/veiculo';
+import type { TipoSinistro, Veiculo } from '~/types/veiculo';
+import { VeiculoRanker } from '~/services/veiculoRankerService';
 
-type CampoOrdenacao = 'descricao' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'lucroEstimado' | 'score';
+type CampoOrdenacao = 'modelo' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'lucroEstimado' | 'score';
 
 const { formatarValor } = useFormatacao();
 const {
@@ -187,26 +211,47 @@ const {
   getRoiClass,
   getScore,
   getScoreClass,
-  getScoreIcon
+  getScoreIcon,
 } = {
   ...useVeiculoScore(),
-  ...useLeiloeiro()
+  ...useLeiloeiro(),
 };
 
 function getPatioUfClass(uf: string | undefined): string {
-  if (!uf) {
-    return 'bg-slate-100 text-slate-700';
-  }
-
-  if (uf === 'DF') {
-    return 'bg-blue-100 text-blue-800';
-  }
-
-  if (uf === 'GO') {
-    return 'bg-emerald-100 text-emerald-800';
-  }
-
+  if (!uf) return 'bg-slate-100 text-slate-700';
+  if (uf === 'DF') return 'bg-blue-100 text-blue-800';
+  if (uf === 'GO') return 'bg-emerald-100 text-emerald-800';
   return 'bg-slate-100 text-slate-700';
+}
+
+function getSinistroClass(sinistro: TipoSinistro): string {
+  if (sinistro === 'IndicioSinistro' || sinistro === 'RecuperadoSinistro') return 'bg-yellow-100 text-yellow-800';
+  if (sinistro === 'PequenaMonta') return 'bg-orange-100 text-orange-800';
+  if (sinistro === 'MediaMonta' || sinistro === 'GrandeMonta' || sinistro === 'Sucata') return 'bg-red-100 text-red-800';
+  return 'bg-slate-100 text-slate-700';
+}
+
+function getSinistroLabel(sinistro: TipoSinistro): string {
+  const labels: Record<TipoSinistro, string> = {
+    Nenhum: 'Sem sinistro',
+    IndicioSinistro: 'Indício',
+    RecuperadoSinistro: 'Recuperado',
+    PequenaMonta: 'Pequena monta',
+    MediaMonta: 'Média monta',
+    GrandeMonta: 'Grande monta',
+    Sucata: 'Sucata',
+  };
+
+  return labels[sinistro] || sinistro;
+}
+
+function temProblemaMotor(descricao: string): boolean {
+  const upper = descricao.toUpperCase();
+  return upper.includes('MOTOR DESMONTADO') || upper.includes('MOTOR FALTANDO') || upper.includes('FALTANDO PEÇAS');
+}
+
+function temProblemaChave(descricao: string): boolean {
+  return descricao.toUpperCase().includes('SEM CHAVE');
 }
 
 const props = defineProps<{

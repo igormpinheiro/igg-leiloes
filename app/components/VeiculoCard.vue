@@ -1,61 +1,54 @@
-<!-- components/VeiculoCard.vue -->
 <template>
   <div class="h-full flex flex-col">
-    <!-- Card header -->
     <div class="p-4 border-b flex justify-between items-center">
       <div>
         <h3 class="text-lg font-semibold truncate">
           <a :href="veiculo.urlOrigem" target="_blank" class="text-blue-600 hover:text-blue-800">
-            {{ veiculo.marca }} {{ veiculo.descricao }}
+            {{ veiculo.marca }} {{ veiculo.modelo }}
           </a>
         </h3>
         <p class="text-gray-600 text-sm">{{ veiculo.ano }} • {{ veiculo.quilometragem.toLocaleString('pt-BR') }} km</p>
         <p v-if="veiculo.dataLeilao" class="text-gray-500 text-xs">Leilão: {{ formatarData(veiculo.dataLeilao) }}</p>
       </div>
       <div class="flex items-center gap-2">
-        <!-- Refresh button -->
         <button
-            @click="atualizarVeiculo"
-            class="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50"
-            :disabled="isRefreshing"
-            title="Atualizar lote"
+          @click="atualizarVeiculo"
+          class="p-2 rounded-full hover:bg-gray-100 disabled:opacity-50"
+          :disabled="isRefreshing"
+          title="Atualizar lote"
         >
           <Icon
-              :name="isRefreshing ? 'mdi:loading' : 'mdi:refresh'"
-              class="text-emerald-600 text-lg"
-              :class="{ 'animate-spin': isRefreshing }"
+            :name="isRefreshing ? 'mdi:loading' : 'mdi:refresh'"
+            class="text-emerald-600 text-lg"
+            :class="{ 'animate-spin': isRefreshing }"
           />
         </button>
-        <!-- Edit button -->
         <button
-            @click="editarVeiculo"
-            class="p-2 rounded-full hover:bg-gray-100"
-            title="Editar veículo"
+          @click="editarVeiculo"
+          class="p-2 rounded-full hover:bg-gray-100"
+          title="Editar veículo"
         >
           <Icon name="mdi:pencil" class="text-blue-600 text-lg" />
         </button>
       </div>
     </div>
 
-    <!-- Card body -->
     <div class="flex-1 p-4">
-      <!-- Status indicator -->
-      <div class="flex items-center mb-2">
+      <div class="flex items-center mb-2 gap-2">
         <span
-            v-if="veiculo.sinistro"
-            class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded mr-2"
+          v-if="veiculo.sinistro !== 'Nenhum'"
+          class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded"
         >
-          Sinistro
+          {{ veiculo.sinistro }}
         </span>
         <span
-            class="px-2 py-1 text-xs font-medium rounded"
-            :class="veiculo.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
+          class="px-2 py-1 text-xs font-medium rounded"
+          :class="veiculo.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'"
         >
           {{ veiculo.active ? 'Ativo' : 'Inativo' }}
         </span>
       </div>
 
-      <!-- Price information -->
       <div class="grid grid-cols-2 gap-2 mt-3">
         <div class="text-sm">
           <div class="text-gray-600">Lance Atual</div>
@@ -69,15 +62,14 @@
         </div>
       </div>
 
-      <!-- Percentage and Score indicators -->
       <div class="grid grid-cols-2 gap-2 mt-3">
         <div class="text-sm">
           <div class="text-gray-600">% Mercado</div>
           <div>
             <span
-                v-if="veiculo.valorMercado > 0"
-                class="px-2 py-1 text-xs font-medium rounded"
-                :class="getPercentageClass(getPorcentagemMercado(veiculo))"
+              v-if="veiculo.valorMercado > 0"
+              class="px-2 py-1 text-xs font-medium rounded"
+              :class="getPercentageClass(getPorcentagemMercado(veiculo))"
             >
               {{ getPorcentagemMercado(veiculo) }}%
             </span>
@@ -88,8 +80,8 @@
           <div class="text-gray-600">Score</div>
           <div>
             <span
-                class="px-2 py-1 text-xs font-medium rounded-full"
-                :class="getScoreClass(getScore(veiculo))"
+              class="px-2 py-1 text-xs font-medium rounded-full"
+              :class="getScoreClass(getScore(veiculo))"
             >
               {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
             </span>
@@ -127,8 +119,8 @@ async function atualizarVeiculo() {
   try {
     isRefreshing.value = true;
     const dataLeilao = props.veiculo.dataLeilao
-        ? new Date(props.veiculo.dataLeilao).toISOString()
-        : undefined;
+      ? new Date(props.veiculo.dataLeilao).toISOString()
+      : undefined;
     const result = await scrapperService.executarScrapper(props.veiculo.urlOrigem, dataLeilao);
 
     if (!result.veiculo) {

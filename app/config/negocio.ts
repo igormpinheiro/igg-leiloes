@@ -2,10 +2,6 @@
 // Configurações centralizadas de valores de negócio
 
 export const CONFIG_NEGOCIO = {
-  // Custos de aquisição
-  taxaLeilao: 0.05, // 5% sobre o lance
-  despesasFixas: 1700, // R$ 1.700,00
-
   // Custos de venda
   comissaoVenda: 0.15, // 15% sobre o valor de mercado
 
@@ -33,4 +29,4 @@ export const CONFIG_NEGOCIO = {
     excelente: 10000,
     bom: 5000,
   },
-} as const
+} as const;

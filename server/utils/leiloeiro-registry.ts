@@ -1,35 +1,52 @@
-// server/utils/leiloeiro-registry.ts
 import type { Veiculo } from '~/types/veiculo';
 import { LeilaoParser } from './scrapper-parser';
 import { LeiloParser } from './leilo-parser';
+import { normalizarDominio } from './veiculo-runtime';
 
-interface LeiloeiroConfig {
-  nome: string;
+export interface LeiloeiroConfig {
+  descricao: string;
   dominio: string;
+  comissaoPadrao: number;
+  taxaAdmPadrao: number;
+  taxaDespachantePadrao: number;
+  taxaVistoriaPadrao: number;
   parser: (html: string, url: string) => Promise<Veiculo | null>;
 }
 
 const LEILOEIROS: LeiloeiroConfig[] = [
   {
-    nome: 'Parque dos Leilões',
+    descricao: 'Parque dos Leilões',
     dominio: 'parquedosleiloes.com.br',
+    comissaoPadrao: 5,
+    taxaAdmPadrao: 1700,
+    taxaDespachantePadrao: 0,
+    taxaVistoriaPadrao: 0,
     parser: (html, url) => LeilaoParser.parseParqueDoLeiloes(html, url),
   },
   {
-    nome: 'Leilo',
+    descricao: 'Leilo',
     dominio: 'leilo.com.br',
+    comissaoPadrao: 5,
+    taxaAdmPadrao: 1700,
+    taxaDespachantePadrao: 0,
+    taxaVistoriaPadrao: 0,
     parser: (html, url) => LeiloParser.parseLeiloBr(html, url),
   },
 ];
 
+function dominioCompativel(url: string, dominio: string): boolean {
+  const host = normalizarDominio(url);
+  return host === dominio || host.endsWith(`.${dominio}`);
+}
+
 export function getLeiloeiroPorUrl(url: string): LeiloeiroConfig | null {
-  return LEILOEIROS.find(l => url.includes(l.dominio)) || null;
+  return LEILOEIROS.find((l) => dominioCompativel(url, l.dominio)) || null;
+}
+
+export function getLeiloeiroPorDominio(dominio: string): LeiloeiroConfig | null {
+  return LEILOEIROS.find((l) => l.dominio === dominio) || null;
 }
 
 export function isUrlSuportada(url: string): boolean {
-  return LEILOEIROS.some(l => url.includes(l.dominio));
-}
-
-export function getNomeLeiloeiro(url: string): string {
-  return getLeiloeiroPorUrl(url)?.nome || 'Desconhecido';
+  return LEILOEIROS.some((l) => dominioCompativel(url, l.dominio));
 }

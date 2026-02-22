@@ -220,7 +220,7 @@ const batchResults = ref<{ veiculo: Veiculo, action: string }[]>([]);
 interface SequentialItem {
   url: string;
   status: 'loading' | 'success' | 'deleted' | 'error';
-  descricao?: string;
+  modelo?: string;
   action?: string;
   error?: string;
 }
@@ -324,9 +324,9 @@ async function iniciarExtracaoSequencial() {
       try {
         const result = await scrapperService.executarScrapper(currentUrl, dataLeilao.value);
         if (result.veiculo) {
-          item.status = 'success'; item.descricao = result.veiculo.descricao; item.action = result.action;
+          item.status = 'success'; item.modelo = result.veiculo.modelo; item.action = result.action;
         } else {
-          item.status = 'deleted'; item.descricao = 'Lote cancelado/descartado'; item.action = 'deleted';
+          item.status = 'deleted'; item.modelo = 'Lote cancelado/descartado'; item.action = 'deleted';
         }
         currentUrl = result.nextUrl;
       } catch (error: any) {

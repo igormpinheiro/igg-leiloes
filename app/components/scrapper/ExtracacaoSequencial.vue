@@ -52,7 +52,7 @@
             <span v-else class="flex-shrink-0 text-red-600 font-bold">ERR</span>
 
             <div class="min-w-0">
-              <p class="text-sm font-medium truncate">{{ item.descricao || item.url }}</p>
+              <p class="text-sm font-medium truncate">{{ item.modelo || item.url }}</p>
               <p v-if="item.error" class="text-xs text-red-500">{{ item.error }}</p>
             </div>
           </div>
@@ -76,7 +76,7 @@ const { getActionBadgeClass, getActionLabel } = useLeiloeiro();
 interface SequentialItem {
   url: string;
   status: 'loading' | 'success' | 'deleted' | 'error';
-  descricao?: string;
+  modelo?: string;
   action?: string;
   error?: string;
 }

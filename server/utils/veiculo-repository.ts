@@ -1,4 +1,3 @@
-// server/utils/veiculo-repository.ts
 import type { Veiculo } from '~/types/veiculo';
 import prisma from './prisma';
 
@@ -8,7 +7,6 @@ import prisma from './prisma';
 export async function upsertVeiculo(
   veiculo: Veiculo,
   dataLeilaoDate: Date,
-  isActive: boolean,
 ): Promise<{ result: any; action: 'created' | 'updated' }> {
   const existing = await prisma.veiculo.findUnique({
     where: { urlOrigem: veiculo.urlOrigem },
@@ -16,24 +14,28 @@ export async function upsertVeiculo(
 
   const isMissingText = (value: string | null | undefined) => !value || value.trim() === '';
   const isMissingNumber = (value: number | null | undefined) => value === null || value === undefined || value === 0;
-  const isMissingBoolean = (value: boolean | null | undefined) => value === null || value === undefined;
 
   if (existing) {
     const updateData: Record<string, any> = {
       lanceAtual: veiculo.lanceAtual,
-      active: isActive,
+      leiloeiroId: veiculo.leiloeiroId,
     };
 
+    if (isMissingText(existing.modelo)) updateData.modelo = veiculo.modelo;
     if (isMissingText(existing.descricao)) updateData.descricao = veiculo.descricao;
     if (isMissingText(existing.marca)) updateData.marca = veiculo.marca;
     if (isMissingText(existing.ano)) updateData.ano = veiculo.ano;
     if (isMissingNumber(existing.quilometragem)) updateData.quilometragem = veiculo.quilometragem;
-    if (isMissingBoolean(existing.sinistro)) updateData.sinistro = veiculo.sinistro;
+    if (existing.sinistro === 'Nenhum' && veiculo.sinistro !== 'Nenhum') updateData.sinistro = veiculo.sinistro;
     if (isMissingNumber(existing.lanceInicial)) updateData.lanceInicial = veiculo.lanceInicial;
     if (isMissingNumber(existing.valorMercado)) updateData.valorMercado = veiculo.valorMercado;
     if (!existing.dataLeilao) updateData.dataLeilao = dataLeilaoDate;
     if (!existing.dataCaptura) updateData.dataCaptura = new Date(veiculo.dataCaptura);
-    if (isMissingText(existing.leiloeiro)) updateData.leiloeiro = veiculo.leiloeiro || 'Desconhecido';
+    if (existing.numeroLote === null && veiculo.numeroLote !== null && veiculo.numeroLote !== undefined) {
+      updateData.numeroLote = veiculo.numeroLote;
+    }
+
+    if (!existing.ipvaPago && veiculo.ipvaPago) updateData.ipvaPago = true;
     if (isMissingText(existing.patioUf) && veiculo.patioUf) updateData.patioUf = veiculo.patioUf;
 
     const result = await prisma.veiculo.update({
@@ -46,19 +48,21 @@ export async function upsertVeiculo(
 
   const result = await prisma.veiculo.create({
     data: {
+      modelo: veiculo.modelo,
       descricao: veiculo.descricao,
       marca: veiculo.marca,
       ano: veiculo.ano,
       quilometragem: veiculo.quilometragem,
       sinistro: veiculo.sinistro,
+      ipvaPago: veiculo.ipvaPago,
+      numeroLote: veiculo.numeroLote,
       lanceInicial: veiculo.lanceInicial,
       lanceAtual: veiculo.lanceAtual,
       valorMercado: veiculo.valorMercado,
       dataCaptura: new Date(veiculo.dataCaptura),
       dataLeilao: dataLeilaoDate,
       urlOrigem: veiculo.urlOrigem,
-      active: isActive,
-      leiloeiro: veiculo.leiloeiro || 'Desconhecido',
+      leiloeiroId: veiculo.leiloeiroId,
       patioUf: veiculo.patioUf,
     },
   });

@@ -68,13 +68,14 @@
       >
         <FiltroVeiculos
           :filtros="filtros"
+          :leiloeiros="leiloeiros"
           @resetar="resetarFiltros"
         />
       </aside>
 
       <div class="flex-1 min-w-0">
         <div v-if="isLoading" class="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div class="mb-2 inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+          <div class="mb-2 inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
           <p class="text-sm text-slate-600">Carregando veículos...</p>
         </div>
 
@@ -124,6 +125,7 @@
       </div>
       <FiltroVeiculos
         :filtros="filtros"
+        :leiloeiros="leiloeiros"
         @resetar="resetarFiltros"
       />
     </aside>
@@ -132,12 +134,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import type { Veiculo } from '~/types/veiculo';
+import type { Leiloeiro, Veiculo } from '~/types/veiculo';
 import { scrapperService } from '~/services/scrapperService';
+import { TipoSinistro } from '~/types/veiculo';
 
 const { getPorcentagemMercado, getScore, calcularLucroEstimado } = useVeiculoScore();
+const { calcularActive } = useDataLeilao();
 
-type CampoOrdenacao = 'descricao' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'lucroEstimado' | 'score';
+type CampoOrdenacao = 'modelo' | 'ano' | 'quilometragem' | 'porcentagemMercado' | 'lucroEstimado' | 'score';
 
 type FiltrosVeiculos = {
   termoPesquisa: string;
@@ -149,6 +153,7 @@ type FiltrosVeiculos = {
   kmMax: number | null;
   semSinistro: boolean;
   apenasAtivos: boolean;
+  leiloeiroId: number | null;
   patioUf: string;
 };
 
@@ -164,7 +169,8 @@ const FILTROS_PADRAO: FiltrosVeiculos = {
   kmMax: null,
   semSinistro: false,
   apenasAtivos: true,
-  patioUf: ''
+  leiloeiroId: null,
+  patioUf: '',
 };
 
 const filtrosColapsados = ref(false);
@@ -183,10 +189,11 @@ const ordenacao = reactive<{
   direcao: 'asc' | 'desc';
 }>({
   campo: 'score',
-  direcao: 'desc'
+  direcao: 'desc',
 });
 
 const veiculos = ref<Veiculo[]>([]);
+const leiloeiros = ref<Leiloeiro[]>([]);
 
 function valorLance(veiculo: Veiculo): number {
   return veiculo.lanceAtual > 0 ? veiculo.lanceAtual : veiculo.lanceInicial;
@@ -202,6 +209,7 @@ function copiarFiltros(origem: FiltrosVeiculos, destino: FiltrosVeiculos): void 
   destino.kmMax = origem.kmMax;
   destino.semSinistro = origem.semSinistro;
   destino.apenasAtivos = origem.apenasAtivos;
+  destino.leiloeiroId = origem.leiloeiroId;
   destino.patioUf = origem.patioUf;
 }
 
@@ -210,7 +218,7 @@ const veiculosFiltrados = computed(() => {
 
   if (filtrosAplicados.termoPesquisa.trim() !== '') {
     const termo = filtrosAplicados.termoPesquisa.toLowerCase().trim();
-    resultado = resultado.filter((v) => v.descricao.toLowerCase().includes(termo) || v.marca.toLowerCase().includes(termo));
+    resultado = resultado.filter((v) => v.modelo.toLowerCase().includes(termo) || v.marca.toLowerCase().includes(termo));
   }
 
   if (filtrosAplicados.anoMin !== null) {
@@ -238,11 +246,15 @@ const veiculosFiltrados = computed(() => {
   }
 
   if (filtrosAplicados.semSinistro) {
-    resultado = resultado.filter((v) => !v.sinistro);
+    resultado = resultado.filter((v) => v.sinistro === TipoSinistro.Nenhum);
   }
 
   if (filtrosAplicados.apenasAtivos) {
     resultado = resultado.filter((v) => v.active);
+  }
+
+  if (filtrosAplicados.leiloeiroId !== null) {
+    resultado = resultado.filter((v) => v.leiloeiroId === filtrosAplicados.leiloeiroId);
   }
 
   if (filtrosAplicados.patioUf) {
@@ -254,10 +266,10 @@ const veiculosFiltrados = computed(() => {
     let valorB = 0;
 
     switch (ordenacao.campo) {
-      case 'descricao':
+      case 'modelo':
         return ordenacao.direcao === 'asc'
-          ? a.descricao.localeCompare(b.descricao)
-          : b.descricao.localeCompare(a.descricao);
+          ? a.modelo.localeCompare(b.modelo)
+          : b.modelo.localeCompare(a.modelo);
       case 'ano':
         valorA = parseInt(a.ano, 10);
         valorB = parseInt(b.ano, 10);
@@ -325,6 +337,11 @@ const chipsFiltrosAtivos = computed(() => {
     chips.push({ chave: 'apenasAtivos', rotulo: 'Inclui inativos' });
   }
 
+  if (filtrosAplicados.leiloeiroId !== null) {
+    const leiloeiro = leiloeiros.value.find((item) => item.id === filtrosAplicados.leiloeiroId);
+    chips.push({ chave: 'leiloeiroId', rotulo: `Leiloeiro: ${leiloeiro?.descricao || filtrosAplicados.leiloeiroId}` });
+  }
+
   if (filtrosAplicados.patioUf) {
     chips.push({ chave: 'patioUf', rotulo: `UF: ${filtrosAplicados.patioUf}` });
   }
@@ -340,7 +357,7 @@ watch(
     filtros.precoMin,
     filtros.precoMax,
     filtros.kmMin,
-    filtros.kmMax
+    filtros.kmMax,
   ],
   () => {
     if (debounceTimer.value) {
@@ -356,50 +373,32 @@ watch(
       filtrosAplicados.kmMin = filtros.kmMin;
       filtrosAplicados.kmMax = filtros.kmMax;
     }, 250);
-  }
+  },
 );
 
 watch(
-  () => [filtros.semSinistro, filtros.apenasAtivos, filtros.patioUf],
+  () => [filtros.semSinistro, filtros.apenasAtivos, filtros.leiloeiroId, filtros.patioUf],
   () => {
     filtrosAplicados.semSinistro = filtros.semSinistro;
     filtrosAplicados.apenasAtivos = filtros.apenasAtivos;
+    filtrosAplicados.leiloeiroId = filtros.leiloeiroId;
     filtrosAplicados.patioUf = filtros.patioUf;
-  }
+  },
 );
 
 function limparFiltro(chave: ChaveFiltro): void {
   switch (chave) {
-    case 'termoPesquisa':
-      filtros.termoPesquisa = FILTROS_PADRAO.termoPesquisa;
-      break;
-    case 'anoMin':
-      filtros.anoMin = FILTROS_PADRAO.anoMin;
-      break;
-    case 'anoMax':
-      filtros.anoMax = FILTROS_PADRAO.anoMax;
-      break;
-    case 'precoMin':
-      filtros.precoMin = FILTROS_PADRAO.precoMin;
-      break;
-    case 'precoMax':
-      filtros.precoMax = FILTROS_PADRAO.precoMax;
-      break;
-    case 'kmMin':
-      filtros.kmMin = FILTROS_PADRAO.kmMin;
-      break;
-    case 'kmMax':
-      filtros.kmMax = FILTROS_PADRAO.kmMax;
-      break;
-    case 'semSinistro':
-      filtros.semSinistro = FILTROS_PADRAO.semSinistro;
-      break;
-    case 'apenasAtivos':
-      filtros.apenasAtivos = FILTROS_PADRAO.apenasAtivos;
-      break;
-    case 'patioUf':
-      filtros.patioUf = FILTROS_PADRAO.patioUf;
-      break;
+    case "termoPesquisa": filtros.termoPesquisa = FILTROS_PADRAO.termoPesquisa; break;
+    case "anoMin": filtros.anoMin = FILTROS_PADRAO.anoMin; break;
+    case "anoMax": filtros.anoMax = FILTROS_PADRAO.anoMax; break;
+    case "precoMin": filtros.precoMin = FILTROS_PADRAO.precoMin; break;
+    case "precoMax": filtros.precoMax = FILTROS_PADRAO.precoMax; break;
+    case "kmMin": filtros.kmMin = FILTROS_PADRAO.kmMin; break;
+    case "kmMax": filtros.kmMax = FILTROS_PADRAO.kmMax; break;
+    case "semSinistro": filtros.semSinistro = FILTROS_PADRAO.semSinistro; break;
+    case "apenasAtivos": filtros.apenasAtivos = FILTROS_PADRAO.apenasAtivos; break;
+    case "leiloeiroId": filtros.leiloeiroId = FILTROS_PADRAO.leiloeiroId; break;
+    case "patioUf": filtros.patioUf = FILTROS_PADRAO.patioUf; break;
   }
   copiarFiltros(filtros, filtrosAplicados);
 }
@@ -422,9 +421,12 @@ async function carregarVeiculos() {
       throw new Error(data.message || 'Erro ao carregar veículos');
     }
 
+    leiloeiros.value = data.leiloeiros || [];
     veiculos.value = data.data.map((veiculo: Veiculo) => ({
       ...veiculo,
-      dataCaptura: new Date(veiculo.dataCaptura)
+      dataCaptura: new Date(veiculo.dataCaptura),
+      dataLeilao: veiculo.dataLeilao ? new Date(veiculo.dataLeilao) : undefined,
+      active: veiculo.dataLeilao ? calcularActive(new Date(veiculo.dataLeilao)) : false,
     }));
   } catch (error) {
     console.error('Erro ao carregar veículos:', error);
@@ -491,7 +493,7 @@ async function salvarVeiculo(veiculoEditado: Veiculo) {
     const response = await fetch(`/api/veiculos/${veiculoEditado.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(veiculoEditado)
+      body: JSON.stringify(veiculoEditado),
     });
 
     if (!response.ok) {
@@ -505,7 +507,11 @@ async function salvarVeiculo(veiculoEditado: Veiculo) {
 
     const index = veiculos.value.findIndex((v) => v.id === veiculoEditado.id);
     if (index !== -1) {
-      veiculos.value[index] = veiculoEditado;
+      veiculos.value[index] = {
+        ...veiculoEditado,
+        dataLeilao: veiculoEditado.dataLeilao ? new Date(veiculoEditado.dataLeilao) : undefined,
+        active: veiculoEditado.dataLeilao ? calcularActive(new Date(veiculoEditado.dataLeilao)) : false,
+      };
     }
 
     alert('Veículo atualizado com sucesso!');

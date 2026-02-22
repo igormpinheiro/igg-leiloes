@@ -1,10 +1,28 @@
-// server/api/veiculos/[id].put.ts
 import prisma from '../../utils/prisma';
 
 const CAMPOS_PERMITIDOS = [
-  'descricao', 'marca', 'ano', 'quilometragem', 'sinistro',
-  'lanceInicial', 'lanceAtual', 'valorMercado', 'active',
+  'modelo',
+  'descricao',
+  'marca',
+  'ano',
+  'quilometragem',
+  'sinistro',
+  'ipvaPago',
+  'numeroLote',
+  'lanceInicial',
+  'lanceAtual',
+  'valorMercado',
 ] as const;
+
+const SINISTROS_VALIDOS = new Set([
+  'Nenhum',
+  'IndicioSinistro',
+  'RecuperadoSinistro',
+  'PequenaMonta',
+  'MediaMonta',
+  'GrandeMonta',
+  'Sucata',
+]);
 
 export default defineEventHandler(async (event) => {
   try {
@@ -19,7 +37,6 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event);
 
-    // Whitelist: apenas campos permitidos passam para o Prisma
     const updateData: Record<string, any> = {};
     for (const campo of CAMPOS_PERMITIDOS) {
       if (body[campo] !== undefined) {
@@ -27,9 +44,19 @@ export default defineEventHandler(async (event) => {
       }
     }
 
+    if (updateData.sinistro && !SINISTROS_VALIDOS.has(updateData.sinistro)) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Valor de sinistro inválido',
+      });
+    }
+
     const veiculoAtualizado = await prisma.veiculo.update({
       where: { id },
       data: updateData,
+      include: {
+        leiloeiro: true,
+      },
     });
 
     return {
@@ -37,8 +64,12 @@ export default defineEventHandler(async (event) => {
       message: 'Veículo atualizado com sucesso',
       data: veiculoAtualizado,
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro ao atualizar veículo:', error);
+
+    if (error?.statusCode && error?.statusMessage) {
+      throw error;
+    }
 
     throw createError({
       statusCode: 500,

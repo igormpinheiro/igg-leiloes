@@ -1,41 +1,33 @@
-<!-- pages/veiculo/[id].vue -->
 <template>
   <div class="container mx-auto px-4 py-8">
-    <div v-if="pending" class="flex justify-center items-center h-64">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    <div v-if="pending" class="flex h-64 items-center justify-center">
+      <div class="inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
     </div>
 
-    <div v-else-if="error" class="bg-red-100 p-4 rounded-lg text-red-700">
+    <div v-else-if="error" class="rounded-lg bg-red-100 p-4 text-red-700">
       {{ error }}
     </div>
 
     <template v-else-if="veiculo">
-      <!-- Navegação -->
       <div class="mb-6">
-        <NuxtLink to="/" class="text-blue-600 hover:text-blue-800 flex items-center">
-          <svg class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+        <NuxtLink to="/" class="flex items-center text-blue-600 hover:text-blue-800">
+          <svg class="mr-1 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
           </svg>
           Voltar para a lista
         </NuxtLink>
       </div>
 
-      <!-- Cabeçalho -->
       <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-800">{{ veiculo.descricao }}</h1>
+        <h1 class="text-3xl font-bold text-gray-800">{{ veiculo.modelo }}</h1>
         <p class="text-gray-600">{{ veiculo.marca }} | {{ veiculo.ano }}</p>
       </div>
 
-      <!-- Conteúdo principal -->
-      <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+      <div class="mb-6 overflow-hidden rounded-lg bg-white shadow">
         <div class="p-6">
-          <!-- Score e informações de destaque -->
-          <div class="flex flex-wrap justify-between items-center mb-6">
-            <div class="flex items-center mb-4 md:mb-0">
-              <span
-                  class="px-3 py-1 text-sm font-medium rounded-full mr-2"
-                  :class="getScoreClass(getScore(veiculo))"
-              >
+          <div class="mb-6 flex flex-wrap items-center justify-between">
+            <div class="mb-4 flex items-center md:mb-0">
+              <span class="mr-2 rounded-full px-3 py-1 text-sm font-medium" :class="getScoreClass(getScore(veiculo))">
                 {{ getScoreIcon(getScore(veiculo)) }} {{ getScore(veiculo).toFixed(1) }}
               </span>
               <span class="text-gray-500">Capturado em {{ new Date(veiculo.dataCaptura).toLocaleString('pt-BR') }}</span>
@@ -43,73 +35,46 @@
 
             <div class="flex items-center gap-2">
               <button
-                  @click="atualizarVeiculo"
-                  class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 disabled:opacity-50"
-                  :disabled="isRefreshing"
-                  title="Atualizar lote"
+                @click="atualizarVeiculo"
+                class="rounded bg-emerald-600 px-4 py-2 text-white hover:bg-emerald-700 disabled:opacity-50"
+                :disabled="isRefreshing"
+                title="Atualizar lote"
               >
-                <Icon
-                    :name="isRefreshing ? 'mdi:loading' : 'mdi:refresh'"
-                    class="text-lg"
-                    :class="{ 'animate-spin': isRefreshing }"
-                />
+                <Icon :name="isRefreshing ? 'mdi:loading' : 'mdi:refresh'" class="text-lg" :class="{ 'animate-spin': isRefreshing }" />
               </button>
               <a
-                  v-if="veiculo.urlOrigem"
-                  :href="veiculo.urlOrigem"
-                  target="_blank"
-                  class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                v-if="veiculo.urlOrigem"
+                :href="veiculo.urlOrigem"
+                target="_blank"
+                class="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
               >
                 Ver no site original
               </a>
             </div>
           </div>
 
-          <!-- Detalhes do veículo -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Especificações -->
+          <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
-              <h2 class="text-xl font-semibold mb-4 pb-2 border-b">Especificações</h2>
+              <h2 class="mb-4 border-b pb-2 text-xl font-semibold">Especificações</h2>
               <dl class="grid grid-cols-2 gap-4">
-                <div>
-                  <dt class="text-sm text-gray-500">Marca</dt>
-                  <dd>{{ veiculo.marca }}</dd>
-                </div>
-                <div>
-                  <dt class="text-sm text-gray-500">Ano</dt>
-                  <dd>{{ veiculo.ano }}</dd>
-                </div>
-                <div>
-                  <dt class="text-sm text-gray-500">Quilometragem</dt>
-                  <dd>{{ veiculo.quilometragem.toLocaleString('pt-BR') }} km</dd>
-                </div>
-                <div>
-                  <dt class="text-sm text-gray-500">Sinistro</dt>
-                  <dd>{{ veiculo.sinistro ? 'Sim' : 'Não' }}</dd>
-                </div>
+                <div><dt class="text-sm text-gray-500">Marca</dt><dd>{{ veiculo.marca }}</dd></div>
+                <div><dt class="text-sm text-gray-500">Ano</dt><dd>{{ veiculo.ano }}</dd></div>
+                <div><dt class="text-sm text-gray-500">Quilometragem</dt><dd>{{ veiculo.quilometragem.toLocaleString('pt-BR') }} km</dd></div>
+                <div><dt class="text-sm text-gray-500">Sinistro</dt><dd>{{ veiculo.sinistro }}</dd></div>
+                <div><dt class="text-sm text-gray-500">Lote</dt><dd>{{ veiculo.numeroLote || '--' }}</dd></div>
+                <div><dt class="text-sm text-gray-500">IPVA</dt><dd>{{ veiculo.ipvaPago ? 'Pago' : 'Por conta do arrematante' }}</dd></div>
               </dl>
             </div>
 
-            <!-- Informações de leilão -->
             <div>
-              <h2 class="text-xl font-semibold mb-4 pb-2 border-b">Informações de Leilão</h2>
+              <h2 class="mb-4 border-b pb-2 text-xl font-semibold">Informações de Leilão</h2>
               <dl class="grid grid-cols-2 gap-4">
-                <div>
-                  <dt class="text-sm text-gray-500">Lance Inicial</dt>
-                  <dd>R$ {{ formatarValor(veiculo.lanceInicial) }}</dd>
-                </div>
-                <div>
-                  <dt class="text-sm text-gray-500">Lance Atual</dt>
-                  <dd>R$ {{ formatarValor(veiculo.lanceAtual) }}</dd>
-                </div>
-                <div>
-                  <dt class="text-sm text-gray-500">Valor de Mercado</dt>
-                  <dd>R$ {{ formatarValor(veiculo.valorMercado) }}</dd>
-                </div>
+                <div><dt class="text-sm text-gray-500">Lance Inicial</dt><dd>R$ {{ formatarValor(veiculo.lanceInicial) }}</dd></div>
+                <div><dt class="text-sm text-gray-500">Lance Atual</dt><dd>R$ {{ formatarValor(veiculo.lanceAtual) }}</dd></div>
+                <div><dt class="text-sm text-gray-500">Valor de Mercado</dt><dd>R$ {{ formatarValor(veiculo.valorMercado) }}</dd></div>
                 <div>
                   <dt class="text-sm text-gray-500">Economia Potencial</dt>
-                  <dd class="font-medium"
-                      :class="getEconomiaClass(veiculo.valorMercado - veiculo.lanceAtual)">
+                  <dd class="font-medium" :class="getEconomiaClass(veiculo.valorMercado - veiculo.lanceAtual)">
                     R$ {{ formatarValor(veiculo.valorMercado - veiculo.lanceAtual) }}
                     ({{ Math.round((veiculo.valorMercado - veiculo.lanceAtual) / veiculo.valorMercado * 100) }}%)
                   </dd>
@@ -118,17 +83,18 @@
             </div>
           </div>
 
-          <!-- Estimativa de lucro -->
-          <div class="mt-8 p-4 border rounded-lg border-blue-200 bg-blue-50">
-            <h2 class="text-xl font-semibold mb-4 pb-2 border-b border-blue-200">Estimativa de Lucro</h2>
+          <div class="mt-8 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <h2 class="mb-4 border-b border-blue-200 pb-2 text-xl font-semibold">Estimativa de Lucro</h2>
             <div class="space-y-3">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
                   <p class="text-sm text-gray-500">Custos Estimados:</p>
                   <ul class="mt-1 space-y-1">
-                    <li>Lance Atual: R$ {{ formatarValor(veiculo.lanceAtual) }}</li>
-                    <li>Taxa ({{ CONFIG_NEGOCIO.taxaLeilao * 100 }}%): R$ {{ formatarValor(veiculo.lanceAtual * CONFIG_NEGOCIO.taxaLeilao) }}</li>
-                    <li>Despesas Fixas: R$ {{ formatarValor(CONFIG_NEGOCIO.despesasFixas) }}</li>
+                    <li>Lance Base: R$ {{ formatarValor(lanceBase) }}</li>
+                    <li>Taxa Leiloeiro ({{ taxas.comissao }}%): R$ {{ formatarValor(valorTaxaLeiloeiro) }}</li>
+                    <li>Taxa Administrativa: R$ {{ formatarValor(taxas.taxaAdm) }}</li>
+                    <li>Despachante: R$ {{ formatarValor(taxas.taxaDespachante) }}</li>
+                    <li>Vistoria: R$ {{ formatarValor(taxas.taxaVistoria) }}</li>
                   </ul>
                 </div>
                 <div>
@@ -140,13 +106,10 @@
                 </div>
               </div>
 
-              <div class="mt-4 pt-3 border-t border-blue-200">
-                <div class="flex justify-between items-center">
+              <div class="mt-4 border-t border-blue-200 pt-3">
+                <div class="flex items-center justify-between">
                   <span class="font-semibold">Lucro Estimado:</span>
-                  <span
-                      class="text-lg font-bold"
-                      :class="getLucroTextClass(calcularLucroEstimado(veiculo))"
-                  >
+                  <span class="text-lg font-bold" :class="getLucroTextClass(calcularLucroEstimado(veiculo))">
                     R$ {{ formatarValor(calcularLucroEstimado(veiculo)) }}
                   </span>
                 </div>
@@ -160,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 import { scrapperService } from '~/services/scrapperService';
 import { CONFIG_NEGOCIO } from '~/config/negocio';
 
@@ -172,18 +135,33 @@ const id = computed(() => route.params.id);
 
 const { data: response, pending, error, refresh } = await useFetch(`/api/veiculos/${id}`, {
   params: { id },
-  transform: (response: any) => {
-    if (!response || !response.success || !response.data) return null;
+  transform: (apiResponse: any) => {
+    if (!apiResponse || !apiResponse.success || !apiResponse.data) return null;
 
     return {
-      ...response.data,
-      dataCaptura: new Date(response.data.dataCaptura)
+      ...apiResponse.data,
+      dataCaptura: new Date(apiResponse.data.dataCaptura),
+      dataLeilao: apiResponse.data.dataLeilao ? new Date(apiResponse.data.dataLeilao) : undefined,
     };
-  }
+  },
 });
 
 const veiculo = computed(() => response.value);
 const isRefreshing = ref(false);
+
+const lanceBase = computed(() => {
+  if (!veiculo.value) return 0;
+  return veiculo.value.lanceAtual > 0 ? veiculo.value.lanceAtual : veiculo.value.lanceInicial;
+});
+
+const taxas = computed(() => ({
+  comissao: veiculo.value?.leiloeiro?.comissao ?? 5,
+  taxaAdm: veiculo.value?.leiloeiro?.taxaAdm ?? 1700,
+  taxaDespachante: veiculo.value?.leiloeiro?.taxaDespachante ?? 0,
+  taxaVistoria: veiculo.value?.leiloeiro?.taxaVistoria ?? 0,
+}));
+
+const valorTaxaLeiloeiro = computed(() => lanceBase.value * (taxas.value.comissao / 100));
 
 function getEconomiaClass(economia: number): string {
   if (economia >= 30000) return 'text-green-600';
@@ -200,8 +178,8 @@ async function atualizarVeiculo() {
   try {
     isRefreshing.value = true;
     const dataLeilao = veiculo.value.dataLeilao
-        ? new Date(veiculo.value.dataLeilao).toISOString()
-        : undefined;
+      ? new Date(veiculo.value.dataLeilao).toISOString()
+      : undefined;
     const result = await scrapperService.executarScrapper(veiculo.value.urlOrigem, dataLeilao);
 
     if (!result.veiculo) {
@@ -210,8 +188,8 @@ async function atualizarVeiculo() {
     }
 
     await refresh();
-  } catch (error) {
-    console.error('Erro ao atualizar lote:', error);
+  } catch (refreshError) {
+    console.error('Erro ao atualizar lote:', refreshError);
     alert('Erro ao atualizar lote. Verifique os logs.');
   } finally {
     isRefreshing.value = false;

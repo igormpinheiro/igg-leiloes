@@ -1,6 +1,6 @@
 # IGG Leiloes
 
-Ferramenta de scraping e ranking de veiculos em leiloes do mercado brasileiro. Extrai listagens de sites de leilao (parquedosleiloes.com.br, leilo.com.br), pontua os veiculos com base em lucratividade e desejabilidade, e armazena tudo em um banco SQLite local.
+Ferramenta de scraping e ranking de veiculos em leiloes do mercado brasileiro. Extrai lotes dos sites de leilao (parquedosleiloes.com.br, leilo.com.br), pontua os veiculos com base em lucratividade e desejabilidade, e armazena tudo em SQLite local.
 
 ## Stack
 
@@ -14,37 +14,45 @@ Ferramenta de scraping e ranking de veiculos em leiloes do mercado brasileiro. E
 
 ```bash
 npm install
+npx prisma migrate dev --name init
 npx prisma generate
-npx prisma migrate dev
+npm run db:seed
 ```
 
-## Desenvolvimento
+## Comandos
 
 ```bash
-npm run dev
+npm run dev            # servidor em http://localhost:3000
+npm run build          # build de producao
+npm run preview        # preview da build
+npm run db:migrate     # prisma migrate dev
+npm run db:seed        # seed dos leiloeiros
+npx nuxi typecheck     # checagem de tipos
 ```
 
-O servidor de desenvolvimento sera iniciado em `http://localhost:3000`.
+## Remodelagem de dados (atual)
 
-## Producao
-
-```bash
-npm run build
-npm run preview
-```
+- `Leiloeiro` virou entidade relacional com taxas:
+  - `descricao`, `dominio`, `comissao`, `taxaAdm`, `taxaDespachante`, `taxaVistoria`
+- `Veiculo.descricao` (antigo nome do carro) foi renomeado para `Veiculo.modelo`
+- Novo `Veiculo.descricao` contem texto livre extraido da pagina
+- Novos campos em `Veiculo`: `ipvaPago`, `numeroLote`, `leiloeiroId`
+- `sinistro` agora e enum (`TipoSinistro`) com valor `Nenhum` para ausencia
+- `active` nao e mais persistido no banco; e calculado em runtime (timezone de negocio)
 
 ## Funcionalidades
 
-### Scraping de Veiculos
+### Scraping
 
-- **Extracao individual**: cola a URL de um lote especifico e extrai os dados do veiculo
-- **Extracao por listagem**: cola a URL de uma pagina de listagem e extrai todas as URLs dos lotes
-- **Extracao sequencial**: processa multiplos lotes em sequencia com acompanhamento de progresso
-- **Extracao em lote**: processa multiplas URLs de uma vez
+- Extracao individual por URL
+- Extracao por listagem
+- Extracao sequencial com progresso
+- Extracao em lote
+- Descarte automatico de lotes invalidados (`Sucata` / `GrandeMonta`)
 
-### Ranking e Score
+### Ranking e score
 
-Cada veiculo recebe uma nota de 0 a 10 baseada em fatores ponderados:
+Cada veiculo recebe nota de 0 a 10 com pesos:
 
 | Fator | Peso |
 |---|---|
@@ -54,43 +62,57 @@ Cada veiculo recebe uma nota de 0 a 10 baseada em fatores ponderados:
 | Tier da marca | 15% |
 | Historico de sinistro | 10% |
 
-### Listagem e Filtros (Home)
+### Home (tabela e filtros)
 
-- Home focada em **tabela unica** (modo cards descontinuado na pagina inicial)
-- Layout denso com **cabecalho sticky** e primeira coluna sticky
+- Home em modo tabela densa (`TabelaVeiculos`)
 - Filtros autoaplicaveis:
-  - debounce para busca e ranges (ano, lance e km)
-  - aplicacao imediata para toggles e UF
-- Chips de filtros ativos com remocao individual
-- Painel de filtros colapsavel no desktop e drawer no mobile
-- Ordenacao por colunas (descricao, ano, km, FIPE, lucro e score)
-- Atualizacao e edicao de veiculos diretamente na tabela
+  - debounce para busca e ranges (ano, lance, km)
+  - aplicacao imediata para toggles/selects
+- Filtro por `leiloeiroId`
+- Filtro sem sinistro baseado em `TipoSinistro.Nenhum`
+- Ordenacao por `modelo`, ano, km, FIPE, lucro e score
+- `active` calculado no carregamento/resposta da API
 
-## Sites Suportados
+## Sites suportados
 
 | Site | Dominio | Parser |
 |---|---|---|
 | Parque dos Leiloes | parquedosleiloes.com.br | `LeilaoParser` |
 | Leilo | leilo.com.br | `LeiloParser` |
 
-## Estrutura do Projeto
+## Estrutura (resumo)
 
 ```
 app/
-├── config/negocio.ts          # Constantes de negocio (taxas, thresholds)
-├── composables/               # Logica compartilhada (formatacao, score, leiloeiro)
-├── components/                # Componentes Vue reutilizaveis
-├── pages/                     # Paginas (listagem, scrapper, detalhe)
-├── services/                  # Servicos client-side (scrapper, ranker)
-└── types/                     # Tipos TypeScript
+├── config/negocio.ts
+├── composables/
+│   ├── useFormatacao.ts
+│   ├── useVeiculoScore.ts
+│   ├── useLeiloeiro.ts
+│   └── useDataLeilao.ts
+├── services/
+│   ├── scrapperService.ts
+│   └── veiculoRankerService.ts
+├── components/
+├── pages/
+└── types/veiculo.ts
 
 server/
-├── api/                       # Endpoints da API (scrapper, veiculos)
-└── utils/                     # Parsers, registry, repository, Prisma
+├── api/
+│   ├── scrapper/
+│   └── veiculos/
+└── utils/
+    ├── parser-base.ts
+    ├── scrapper-parser.ts
+    ├── leilo-parser.ts
+    ├── leiloeiro-registry.ts
+    ├── veiculo-repository.ts
+    ├── veiculo-runtime.ts
+    └── prisma.ts
 ```
 
-## Adicionando um Novo Site de Leilao
+## Adicionando novo site de leilao
 
-1. Criar um parser em `server/utils/` importando funcoes de `parser-base.ts`
+1. Criar parser em `server/utils/` usando `parser-base.ts`
 2. Registrar dominio e parser em `server/utils/leiloeiro-registry.ts`
-3. Adicionar dominio na lista de suportados em `app/services/scrapperService.ts`
+3. Garantir dominio cadastrado em `Leiloeiro` (seed ou insert manual)

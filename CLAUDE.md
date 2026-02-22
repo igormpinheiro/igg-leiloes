@@ -17,13 +17,40 @@ Vehicle auction scraper and ranking tool (Brazilian market). Scrapes vehicle lis
 ## Commands
 
 ```bash
-npm install              # Install dependencies
-npm run dev              # Dev server on http://localhost:3000
-npm run build            # Production build
-npx nuxi typecheck       # Run TypeScript type checking
-npx prisma migrate dev   # Run database migrations
-npx prisma generate      # Regenerate Prisma client after schema changes
+npm install
+npm run dev
+npm run build
+npx nuxi typecheck
+npm run db:migrate      # prisma migrate dev
+npm run db:seed         # prisma db seed
+npx prisma generate
 ```
+
+## Data Model (Current)
+
+### Prisma entities
+
+- `Leiloeiro` (new relation table)
+  - `id`, `descricao`, `dominio` (unique)
+  - `comissao`, `taxaAdm`, `taxaDespachante`, `taxaVistoria`
+
+- `Veiculo`
+  - `modelo` = old vehicle name field
+  - `descricao` = free text extracted from source page
+  - `sinistro` = enum (`TipoSinistro`) with `Nenhum` as no-claim state
+  - new fields: `ipvaPago`, `numeroLote`, `leiloeiroId`
+  - `active` is **not persisted**; computed at runtime
+
+### Domain enums
+
+- `TipoSinistro`:
+  - `Nenhum`
+  - `IndicioSinistro`
+  - `RecuperadoSinistro`
+  - `PequenaMonta`
+  - `MediaMonta`
+  - `GrandeMonta`
+  - `Sucata`
 
 ## Architecture
 
@@ -31,28 +58,29 @@ npx prisma generate      # Regenerate Prisma client after schema changes
 
 ```
 app/
-├── config/negocio.ts              # Business constants (tax rates, thresholds, scoring)
+├── config/negocio.ts
 ├── composables/
-│   ├── useFormatacao.ts           # formatarValor(), formatarData()
-│   ├── useVeiculoScore.ts         # Score/percentage/profit calculations + CSS classes
-│   └── useLeiloeiro.ts            # Leiloeiro badge styling and labels
+│   ├── useFormatacao.ts
+│   ├── useVeiculoScore.ts
+│   ├── useLeiloeiro.ts
+│   └── useDataLeilao.ts            # active runtime calculation (timezone-aware)
 ├── services/
-│   ├── scrapperService.ts         # Client-side URL validation + API calls
-│   └── veiculoRankerService.ts    # Vehicle scoring (0-10) with weighted factors
+│   ├── scrapperService.ts
+│   └── veiculoRankerService.ts
 ├── components/
-│   ├── VeiculoCard.vue            # Vehicle card (kept for reuse outside index if needed)
-│   ├── VeiculoEditModal.vue       # Vehicle edit modal
-│   ├── FiltroVeiculos.vue         # Auto-applied filter panel (desktop + mobile drawer usage)
-│   ├── TabelaVeiculos.vue         # Dense/sticky vehicle table view (single mode on index)
+│   ├── VeiculoCard.vue
+│   ├── VeiculoEditModal.vue
+│   ├── FiltroVeiculos.vue
+│   ├── TabelaVeiculos.vue
 │   └── scrapper/
-│       ├── ExtracacaoSequencial.vue  # Sequential extraction progress
-│       ├── ResultadosLote.vue        # Batch results table
-│       └── HistoricoExtracoes.vue    # Extraction history
+│       ├── ExtracacaoSequencial.vue
+│       ├── ResultadosLote.vue
+│       └── HistoricoExtracoes.vue
 ├── pages/
-│   ├── index.vue                  # Vehicle listing (table-only, no cards toggle)
-│   ├── scrapper.vue               # Scraping interface (individual/listing/sequential)
-│   └── veiculo/[id].vue           # Vehicle detail page
-└── types/veiculo.ts               # Veiculo interface (core domain model)
+│   ├── index.vue
+│   ├── scrapper.vue
+│   └── veiculo/[id].vue
+└── types/veiculo.ts
 ```
 
 ### Server Structure
@@ -61,65 +89,59 @@ app/
 server/
 ├── api/
 │   ├── scrapper/
-│   │   ├── extract.post.ts            # Single vehicle extraction
-│   │   ├── extract-listing.post.ts    # Listing page extraction (get URLs)
-│   │   ├── extract-sequential.post.ts # Sequential extraction with Puppeteer
-│   │   └── batch.post.ts              # Batch extraction
+│   │   ├── extract.post.ts
+│   │   ├── extract-listing.post.ts
+│   │   ├── extract-sequential.post.ts
+│   │   └── batch.post.ts
 │   └── veiculos/
-│       ├── index.get.ts               # List vehicles (filters + pagination)
-│       ├── [id].get.ts                # Get single vehicle
-│       └── [id].put.ts                # Update vehicle (field whitelist enforced)
+│       ├── index.get.ts
+│       ├── [id].get.ts
+│       └── [id].put.ts
 └── utils/
-    ├── parser-base.ts                 # Shared: MARCAS_CONHECIDAS, extrairValorNumerico(), processarDescricao()
-    ├── scrapper-parser.ts             # LeilaoParser for parquedosleiloes.com.br
-    ├── leilo-parser.ts                # LeiloParser for leilo.com.br (single vehicle)
-    ├── leilo-listing-parser.ts        # LeiloListingParser for leilo.com.br (listing pages)
-    ├── leilo-puppeteer-parser.ts      # Puppeteer-based parser for dynamic content
-    ├── leiloeiro-registry.ts          # Domain → parser routing registry
-    ├── veiculo-repository.ts          # DB operations (upsert, delete)
-    └── prisma.ts                      # Prisma client singleton
+    ├── parser-base.ts
+    ├── scrapper-parser.ts
+    ├── leilo-parser.ts
+    ├── leilo-listing-parser.ts
+    ├── leilo-puppeteer-parser.ts
+    ├── leiloeiro-registry.ts
+    ├── veiculo-repository.ts
+    ├── veiculo-runtime.ts          # domain normalization + active calculation
+    └── prisma.ts
 ```
 
-### Home UX Notes (`app/pages/index.vue`)
+## Scraping Pipeline
 
-- Home uses a **single dense table mode** (`TabelaVeiculos`) and no cards toggle.
-- Filter UX is **auto-apply**:
+1. **Client** (`app/services/scrapperService.ts`) validates URL domain and calls server API.
+2. **API** (`server/api/scrapper/extract.post.ts`) validates URL, fetches HTML, routes parser, resolves `leiloeiroId`, upserts vehicle.
+3. **Registry** (`server/utils/leiloeiro-registry.ts`) routes domain -> parser.
+4. **Parsers** map source HTML into `Veiculo` shape (`modelo`, `descricao`, `sinistro`, `ipvaPago`, `numeroLote`, etc.).
+5. **Repository** (`server/utils/veiculo-repository.ts`) handles DB upsert/delete.
+6. **Ranking** (`app/services/veiculoRankerService.ts`) computes score 0-10.
+
+## Home UX Notes (`app/pages/index.vue`)
+
+- Single dense table mode (`TabelaVeiculos`).
+- Auto-apply filters:
   - debounce (~250ms) for search and numeric ranges
   - immediate apply for toggles/select fields
-- Active filters are shown as removable chips.
-- Filters panel is collapsible on desktop and rendered as a drawer on mobile.
-- Current data strategy is still client-side (`/api/veiculos?limit=10000`) with local filtering/sorting.
+- Active filter chips are removable.
+- Desktop collapsible filters + mobile drawer.
+- Client-side strategy remains `GET /api/veiculos?limit=10000` and local sorting/filtering.
+- Added filter by `leiloeiroId`.
+- `active` is computed, not persisted.
 
-### Scraping Pipeline
+## Adding a New Auction Site
 
-1. **Client** (`app/services/scrapperService.ts`) — validates URL domain, calls server API
-2. **Server API** (`server/api/scrapper/extract.post.ts`) — orchestrator: validate URL → fetch HTML → route to parser via registry → save via repository → return result
-3. **Registry** (`server/utils/leiloeiro-registry.ts`) — maps domains to parsers
-4. **Parsers** — site-specific HTML parsers that extract vehicle data into `Veiculo` objects:
-   - `server/utils/scrapper-parser.ts` → `LeilaoParser` for parquedosleiloes.com.br
-   - `server/utils/leilo-parser.ts` → `LeiloParser` for leilo.com.br
-   - Both import shared functions from `server/utils/parser-base.ts`
-5. **Repository** (`server/utils/veiculo-repository.ts`) — handles DB upsert/delete
-6. **Ranking** (`app/services/veiculoRankerService.ts`) — scores vehicles 0-10 based on weighted factors: gross profit (35%), profit percentage (25%), mileage (20%), brand tier (15%), accident history (10%)
-
-### Key Data Flow
-
-- Scraped vehicles go through parsers → scored by `VeiculoRanker.calcularScore()` → saved to SQLite via Prisma
-- The `Veiculo` type (`app/types/veiculo.ts`) is the core domain model shared between client and server
-- Vehicles flagged as "sucata" or "grande monta" (salvage) are automatically discarded by parsers
-- Business constants (tax rates, thresholds) are centralized in `app/config/negocio.ts`
-
-### Adding a New Auction Site
-
-1. Create a new parser in `server/utils/` following the pattern of existing parsers (import from `parser-base.ts`)
-2. Register the domain and parser in `server/utils/leiloeiro-registry.ts`
-3. Add domain to supported list in `app/services/scrapperService.ts` (`isUrlSupported` and `determinarLeiloeiro`)
+1. Create a parser in `server/utils/` (reuse `parser-base.ts`).
+2. Register domain and parser in `server/utils/leiloeiro-registry.ts`.
+3. Ensure `Leiloeiro` exists for that domain (seed or DB insert) so `leiloeiroId` can be resolved.
+4. If needed, add domain to supported list in `app/services/scrapperService.ts`.
 
 ## Conventions
 
-- Code and comments are in Portuguese (Brazilian)
-- Currency values use Brazilian format (R$ 1.000,00) — parsers convert to float
-- Vehicle brands are stored uppercase
-- All API error handling uses `throw createError()` (never `return createError()`)
-- Frontend formatting/scoring logic lives in composables, not duplicated in components
-- API update endpoints enforce field whitelists for security
+- Code and comments are in Portuguese (Brazilian).
+- Currency values use Brazilian format (`R$ 1.000,00`), parsers convert to float.
+- Vehicle brands are stored uppercase.
+- API errors must use `throw createError()`.
+- Frontend formatting/scoring logic should stay in composables/services (avoid duplication in components).
+- Update endpoints enforce field whitelists.
