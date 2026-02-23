@@ -42,7 +42,7 @@ export class LeiloParser {
         quilometragem,
         sinistro,
         ipvaPago: this.extrairIpvaPago(descricaoLivre),
-        numeroLote: this.extrairNumeroLote(root),
+        numeroLote: this.extrairNumeroLote(root, html),
         lanceInicial,
         lanceAtual,
         valorMercado,
@@ -252,16 +252,129 @@ export class LeiloParser {
     return texto.replace(/\s+/g, ' ').trim();
   }
 
-  private static extrairNumeroLote(root: HTMLElement): number | null {
-    const texto = root.querySelector('.n-lote')?.textContent
-      || root.querySelector('.q-field__native span')?.textContent
-      || '';
+  private static extrairNumeroLote(root: HTMLElement, html: string): number | null {
+    // Prioridade A: texto explícito no DOM (ex.: "Lote 71")
+    const seletoresPreferenciais = [
+      '.n-lote',
+      '.text-primary.text-uppercase.text-weight-medium.text-subtitle2',
+      '.q-field__native span',
+    ];
 
-    const match = texto.match(/Lote\s+(\d+)/i) || texto.match(/(\d+)/);
+    for (const seletor of seletoresPreferenciais) {
+      const texto = root.querySelector(seletor)?.textContent?.trim() || '';
+      const numero = this.extrairNumeroDeTextoLote(texto);
+      if (numero !== null) return numero;
+    }
+
+    const candidatosDom = root.querySelectorAll('div, span, strong, p');
+    for (const no of candidatosDom) {
+      const texto = no.textContent?.trim() || '';
+      if (!/lote/i.test(texto)) continue;
+      const numero = this.extrairNumeroDeTextoLote(texto);
+      if (numero !== null) return numero;
+    }
+
+    // Prioridade B: estado da SPA embutido no HTML
+    const numeroEstado = this.extrairNumeroLoteDoEstado(html);
+    if (numeroEstado !== null) return numeroEstado;
+
+    // Prioridade C: varredura contextual no HTML bruto
+    return this.extrairNumeroDeTextoLote(html);
+  }
+
+  private static extrairNumeroDeTextoLote(texto: string): number | null {
+    if (!texto) return null;
+
+    const match = texto.match(/\bLote\s*(?:n[ºo.]?\s*)?(\d{1,6})\b/i);
     if (!match?.[1]) return null;
 
     const valor = parseInt(match[1], 10);
-    return Number.isNaN(valor) ? null : valor;
+    if (!Number.isInteger(valor) || valor <= 0) return null;
+    return valor;
+  }
+
+  private static extrairNumeroLoteDoEstado(html: string): number | null {
+    const state = this.extrairObjetoEstado(html, 'LoteSelecionadoState');
+    if (!state || typeof state !== 'object') return null;
+    return this.encontrarNumeroLoteEmObjeto(state);
+  }
+
+  private static extrairObjetoEstado(html: string, nomeEstado: string): Record<string, any> | null {
+    const regex = new RegExp(`"${nomeEstado}"\\s*:\\s*\\{`);
+    const stateMatch = html.match(regex);
+    if (!stateMatch || stateMatch.index === undefined) return null;
+
+    try {
+      const startIndex = stateMatch.index + stateMatch[0].length - 1;
+      let bracketCount = 0;
+      let endIndex = startIndex;
+
+      for (let i = startIndex; i < Math.min(startIndex + 15000, html.length); i++) {
+        if (html[i] === '{') bracketCount++;
+        else if (html[i] === '}') {
+          bracketCount--;
+          if (bracketCount === 0) {
+            endIndex = i + 1;
+            break;
+          }
+        }
+      }
+
+      const stateJson = html.substring(startIndex, endIndex);
+      return JSON.parse(stateJson);
+    } catch {
+      return null;
+    }
+  }
+
+  private static encontrarNumeroLoteEmObjeto(obj: unknown, caminho = ''): number | null {
+    if (obj === null || obj === undefined) return null;
+
+    if (typeof obj === 'string') {
+      return this.extrairNumeroDeTextoLote(obj);
+    }
+
+    if (typeof obj !== 'object') {
+      return null;
+    }
+
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        const numero = this.encontrarNumeroLoteEmObjeto(item, caminho);
+        if (numero !== null) return numero;
+      }
+      return null;
+    }
+
+    const registro = obj as Record<string, unknown>;
+    const chavesPreferenciais = new Set(['numerolote', 'numero_lote', 'lote_numero', 'lotenumero']);
+
+    for (const [chave, valor] of Object.entries(registro)) {
+      const chaveNormalizada = chave.toLowerCase();
+      const proximoCaminho = caminho ? `${caminho}.${chaveNormalizada}` : chaveNormalizada;
+
+      if (typeof valor === 'number' && Number.isInteger(valor) && valor > 0) {
+        const ehChavePreferencial = chavesPreferenciais.has(chaveNormalizada);
+        const ehNumeroDeLote = chaveNormalizada === 'numero' && /lote/.test(caminho);
+        const ehChaveLoteNumerica = chaveNormalizada === 'lote';
+
+        if (ehChavePreferencial || ehNumeroDeLote || ehChaveLoteNumerica) {
+          return valor;
+        }
+      }
+
+      if (typeof valor === 'string') {
+        if (chaveNormalizada.includes('lote') || (chaveNormalizada === 'numero' && /lote/.test(caminho))) {
+          const numero = this.extrairNumeroDeTextoLote(valor);
+          if (numero !== null) return numero;
+        }
+      }
+
+      const numeroRecursivo = this.encontrarNumeroLoteEmObjeto(valor, proximoCaminho);
+      if (numeroRecursivo !== null) return numeroRecursivo;
+    }
+
+    return null;
   }
 
   private static extrairIpvaPago(descricao: string): boolean {
