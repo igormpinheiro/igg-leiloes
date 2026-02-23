@@ -4,8 +4,10 @@
     <VeiculoEditModal
       :is-open="modalEditarAberto"
       :veiculo="veiculoSelecionado"
+      :refreshing="refreshingId === veiculoSelecionado?.id"
       @close="fecharModalEditar"
       @save="salvarVeiculo"
+      @atualizar="atualizarVeiculoDoModal"
     />
 
     <div class="mb-4 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -91,10 +93,8 @@
           v-else
           :veiculos="veiculosFiltrados"
           :ordenacao="ordenacao"
-          :refreshing-id="refreshingId"
           @ordenar="toggleOrdenacao"
           @editar="abrirModalEditar"
-          @atualizar="atualizarVeiculo"
         />
       </div>
     </div>
@@ -461,6 +461,10 @@ function atualizarVeiculoDaLista(veiculoAtualizado: Veiculo) {
   if (index !== -1) {
     veiculos.value[index] = { ...veiculos.value[index], ...veiculoAtualizado };
   }
+
+  if (veiculoSelecionado.value?.id === veiculoAtualizado.id) {
+    veiculoSelecionado.value = { ...veiculoSelecionado.value, ...veiculoAtualizado };
+  }
 }
 
 async function atualizarVeiculo(veiculo: Veiculo) {
@@ -485,6 +489,14 @@ async function atualizarVeiculo(veiculo: Veiculo) {
   } finally {
     refreshingId.value = null;
   }
+}
+
+async function atualizarVeiculoDoModal() {
+  if (!veiculoSelecionado.value) {
+    return;
+  }
+
+  await atualizarVeiculo(veiculoSelecionado.value);
 }
 
 async function salvarVeiculo(veiculoEditado: Veiculo) {

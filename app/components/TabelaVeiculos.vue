@@ -1,7 +1,7 @@
 <template>
   <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
     <div class="max-h-[calc(100vh-14rem)] overflow-auto">
-      <table class="w-full min-w-[1120px] table-fixed divide-y divide-slate-200">
+      <table class="w-full min-w-[1040px] table-fixed divide-y divide-slate-200">
         <thead class="sticky top-0 z-20 bg-slate-50">
           <tr class="text-xs uppercase tracking-wide text-slate-600">
             <th class="sticky left-0 z-30 w-[280px] bg-slate-50 px-3 py-2 text-left font-semibold">
@@ -51,7 +51,6 @@
                 <Icon v-if="ordenacao.campo === 'score'" :name="ordenacao.direcao === 'asc' ? 'mdi:arrow-up' : 'mdi:arrow-down'" class="text-sm" />
               </button>
             </th>
-            <th class="w-[80px] px-2 py-2 text-center font-semibold">Ações</th>
           </tr>
         </thead>
 
@@ -70,7 +69,9 @@
                   <a
                     :href="veiculo.urlOrigem"
                     target="_blank"
+                    rel="noopener noreferrer"
                     class="line-clamp-2 text-[15px] font-semibold text-blue-700 hover:text-blue-900"
+                    @click="handleNomeVeiculoClick($event, veiculo)"
                   >
                     {{ veiculo.marca }} {{ veiculo.modelo }}
                   </a>
@@ -251,33 +252,6 @@
                 </div>
               </div>
             </td>
-            <td class="px-2 py-2 text-center align-top">
-              <div class="flex items-center justify-center gap-1">
-                <button
-                  type="button"
-                  class="rounded p-1 text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  :disabled="refreshingId === veiculo.id"
-                  title="Atualizar lote"
-                  aria-label="Atualizar lote"
-                  @click="$emit('atualizar', veiculo)"
-                >
-                  <Icon
-                    :name="refreshingId === veiculo.id ? 'mdi:loading' : 'mdi:refresh'"
-                    class="text-base"
-                    :class="{ 'animate-spin': refreshingId === veiculo.id }"
-                  />
-                </button>
-                <button
-                  type="button"
-                  class="rounded p-1 text-blue-600 transition hover:bg-blue-50 hover:text-blue-700"
-                  title="Editar veículo"
-                  aria-label="Editar veículo"
-                  @click="$emit('editar', veiculo)"
-                >
-                  <Icon name="mdi:pencil" class="text-base" />
-                </button>
-              </div>
-            </td>
           </tr>
         </tbody>
       </table>
@@ -354,7 +328,6 @@ function temProblemaChave(descricao: string): boolean {
 const props = defineProps<{
   veiculos: Veiculo[];
   ordenacao: { campo: CampoOrdenacao; direcao: 'asc' | 'desc' };
-  refreshingId: string | null;
 }>();
 
 const scoreExplicacoes = computed(() => {
@@ -405,9 +378,17 @@ function getAriaSort(campo: CampoOrdenacao): 'ascending' | 'descending' | 'none'
   return props.ordenacao.direcao === 'asc' ? 'ascending' : 'descending';
 }
 
-defineEmits<{
+const emit = defineEmits<{
   ordenar: [campo: CampoOrdenacao];
   editar: [veiculo: Veiculo];
-  atualizar: [veiculo: Veiculo];
 }>();
+
+function handleNomeVeiculoClick(event: MouseEvent, veiculo: Veiculo): void {
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) {
+    return;
+  }
+
+  event.preventDefault();
+  emit('editar', veiculo);
+}
 </script>

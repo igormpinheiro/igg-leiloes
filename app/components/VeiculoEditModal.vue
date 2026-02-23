@@ -4,9 +4,32 @@
       <div class="border-b p-4">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-semibold text-gray-900">Editar Veículo</h3>
-          <button @click="fecharModal" class="text-gray-500 hover:text-gray-700">
-            <Icon name="mdi:close" class="text-xl" />
-          </button>
+          <div class="flex items-center gap-2">
+            <a
+              v-if="veiculoEditado.urlOrigem"
+              :href="veiculoEditado.urlOrigem"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="rounded p-1 text-blue-600 transition hover:bg-blue-50 hover:text-blue-700"
+              title="Abrir lote no site de origem"
+              aria-label="Abrir lote no site de origem"
+            >
+              <Icon name="mdi:open-in-new" class="text-xl" />
+            </a>
+            <button
+              type="button"
+              class="rounded p-1 text-emerald-600 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+              :disabled="refreshing || !veiculoEditado.urlOrigem"
+              title="Atualizar lote"
+              aria-label="Atualizar lote"
+              @click="atualizarVeiculo"
+            >
+              <Icon :name="refreshing ? 'mdi:loading' : 'mdi:refresh'" class="text-xl" :class="{ 'animate-spin': refreshing }" />
+            </button>
+            <button @click="fecharModal" class="text-gray-500 hover:text-gray-700" aria-label="Fechar modal">
+              <Icon name="mdi:close" class="text-xl" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -192,9 +215,14 @@ const {
 const props = defineProps<{
   isOpen: boolean;
   veiculo: Veiculo | null;
+  refreshing: boolean;
 }>();
 
-const emit = defineEmits(['close', 'save']);
+const emit = defineEmits<{
+  close: [];
+  save: [veiculo: Veiculo];
+  atualizar: [];
+}>();
 
 const opcoesSinistro = Object.values(TipoSinistro);
 
@@ -233,5 +261,9 @@ function fecharModal() {
 function salvarVeiculo() {
   emit('save', { ...veiculoEditado });
   fecharModal();
+}
+
+function atualizarVeiculo() {
+  emit('atualizar');
 }
 </script>
