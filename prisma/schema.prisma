@@ -49,8 +49,16 @@ model Veiculo {
   leiloeiroId   Int
   leiloeiro     Leiloeiro    @relation(fields: [leiloeiroId], references: [id])
   patioUf       String?
+  isCandidato   Boolean      @default(false)
+  candidatoOrdem Int?
+  lanceLimite   Float?
+  candidatoStatus String?
+  candidatoUltimoErro String?
+  candidatoAtualizadoEm DateTime?
 
   @@index([dataLeilao])
   @@index([sinistro])
   @@index([leiloeiroId])
+  @@index([isCandidato])
+  @@index([isCandidato, candidatoOrdem])
 }

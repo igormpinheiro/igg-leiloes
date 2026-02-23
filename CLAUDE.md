@@ -39,6 +39,9 @@ npx prisma generate
   - `descricao` = free text extracted from source page
   - `sinistro` = enum (`TipoSinistro`) with `Nenhum` as no-claim state
   - new fields: `ipvaPago`, `numeroLote`, `leiloeiroId`
+  - candidates fields:
+    - `isCandidato`, `candidatoOrdem`, `lanceLimite`
+    - `candidatoStatus`, `candidatoUltimoErro`, `candidatoAtualizadoEm`
   - `active` is **not persisted**; computed at runtime
 
 ### Domain enums
@@ -68,6 +71,8 @@ app/
 │   ├── scrapperService.ts
 │   └── veiculoRankerService.ts
 ├── components/
+│   ├── CandidatoCard.vue
+│   ├── EstimativaLucroTabela.vue
 │   ├── VeiculoEditModal.vue
 │   ├── FiltroVeiculos.vue
 │   ├── TabelaVeiculos.vue
@@ -76,6 +81,7 @@ app/
 │       ├── ResultadosLote.vue
 │       └── HistoricoExtracoes.vue
 ├── pages/
+│   ├── candidatos.vue
 │   ├── index.vue
 │   ├── scrapper.vue
 │   └── veiculo/[id].vue
@@ -88,15 +94,23 @@ app/
 server/
 ├── api/
 │   ├── scrapper/
+│   │   └── candidatos/refresh.post.ts
 │   │   ├── extract.post.ts
 │   │   ├── extract-listing.post.ts
 │   │   ├── extract-sequential.post.ts
 │   │   └── batch.post.ts
 │   └── veiculos/
+│       ├── candidatos.get.ts
+│       ├── candidatos/lance-limite.put.ts
+│       ├── candidatos/ordem.put.ts
+│       ├── [id]/candidato.post.ts
+│       ├── [id]/lance-limite.patch.ts
 │       ├── index.get.ts
 │       ├── [id].get.ts
 │       └── [id].put.ts
 └── utils/
+    ├── extract-veiculo.ts         # shared extraction pipeline for single/refresh flows
+    ├── lance-limite.ts            # lanceLimite rule (~60% market with increment rounding)
     ├── parser-base.ts
     ├── scrapper-parser.ts
     ├── leilo-parser.ts
@@ -111,11 +125,33 @@ server/
 ## Scraping Pipeline
 
 1. **Client** (`app/services/scrapperService.ts`) validates URL domain and calls server API.
-2. **API** (`server/api/scrapper/extract.post.ts`) validates URL, fetches HTML, routes parser, resolves `leiloeiroId`, upserts vehicle.
+2. **API** (`server/api/scrapper/extract.post.ts`) delegates to shared extractor and persists/upserts.
 3. **Registry** (`server/utils/leiloeiro-registry.ts`) routes domain -> parser.
 4. **Parsers** map source HTML into `Veiculo` shape (`modelo`, `descricao`, `sinistro`, `ipvaPago`, `numeroLote`, etc.).
 5. **Repository** (`server/utils/veiculo-repository.ts`) handles DB upsert/delete.
 6. **Ranking** (`app/services/veiculoRankerService.ts`) computes score 0-10.
+
+## Candidates Module
+
+- Home table (`TabelaVeiculos`) has a star action to add/remove candidates.
+- Home filters include `apenasCandidatos`.
+- `POST /api/veiculos/[id]/candidato` uses explicit desired state (`isCandidato`) and requires confirmation to remove.
+- Candidates page (`/candidatos`) uses tabs:
+  - `Ativos`
+  - `Historico` (inativos)
+- Reordering is button-based (up/down) and persisted via `PUT /api/veiculos/candidatos/ordem` using full ID list.
+- `lanceLimite` is strategy-driven:
+  - target ~60% of market value
+  - rounded down to global increment multiple
+  - global increment changes trigger batch recalculation via `PUT /api/veiculos/candidatos/lance-limite`
+- Candidate card financial UX:
+  - highlighted quick summary with ROI/Lucro color classes from `useVeiculoScore`
+  - full profitability table (same structure as modal) for **lanceAtual local** base
+  - score badge keeps normal breakdown (no simulation)
+- Batch refresh endpoint:
+  - `POST /api/scrapper/candidatos/refresh`
+  - sequential refresh with delay to reduce rate-limit risk
+  - on failure/invalid lot, candidate is kept and flagged (`candidatoStatus`, `candidatoUltimoErro`)
 
 ## Home UX Notes (`app/pages/index.vue`)
 

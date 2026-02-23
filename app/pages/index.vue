@@ -95,6 +95,7 @@
           :ordenacao="ordenacao"
           @ordenar="toggleOrdenacao"
           @editar="abrirModalEditar"
+          @toggle-candidato="toggleCandidato"
         />
       </div>
     </div>
@@ -153,6 +154,7 @@ type FiltrosVeiculos = {
   kmMax: number | null;
   semSinistro: boolean;
   apenasAtivos: boolean;
+  apenasCandidatos: boolean;
   leiloeiroId: number | null;
   patioUf: string;
 };
@@ -169,6 +171,7 @@ const FILTROS_PADRAO: FiltrosVeiculos = {
   kmMax: null,
   semSinistro: false,
   apenasAtivos: true,
+  apenasCandidatos: false,
   leiloeiroId: null,
   patioUf: '',
 };
@@ -209,6 +212,7 @@ function copiarFiltros(origem: FiltrosVeiculos, destino: FiltrosVeiculos): void 
   destino.kmMax = origem.kmMax;
   destino.semSinistro = origem.semSinistro;
   destino.apenasAtivos = origem.apenasAtivos;
+  destino.apenasCandidatos = origem.apenasCandidatos;
   destino.leiloeiroId = origem.leiloeiroId;
   destino.patioUf = origem.patioUf;
 }
@@ -251,6 +255,10 @@ const veiculosFiltrados = computed(() => {
 
   if (filtrosAplicados.apenasAtivos) {
     resultado = resultado.filter((v) => v.active);
+  }
+
+  if (filtrosAplicados.apenasCandidatos) {
+    resultado = resultado.filter((v) => !!v.isCandidato);
   }
 
   if (filtrosAplicados.leiloeiroId !== null) {
@@ -337,6 +345,10 @@ const chipsFiltrosAtivos = computed(() => {
     chips.push({ chave: 'apenasAtivos', rotulo: 'Inclui inativos' });
   }
 
+  if (filtrosAplicados.apenasCandidatos) {
+    chips.push({ chave: 'apenasCandidatos', rotulo: 'Apenas candidatos' });
+  }
+
   if (filtrosAplicados.leiloeiroId !== null) {
     const leiloeiro = leiloeiros.value.find((item) => item.id === filtrosAplicados.leiloeiroId);
     chips.push({ chave: 'leiloeiroId', rotulo: `Leiloeiro: ${leiloeiro?.descricao || filtrosAplicados.leiloeiroId}` });
@@ -377,10 +389,11 @@ watch(
 );
 
 watch(
-  () => [filtros.semSinistro, filtros.apenasAtivos, filtros.leiloeiroId, filtros.patioUf],
+  () => [filtros.semSinistro, filtros.apenasAtivos, filtros.apenasCandidatos, filtros.leiloeiroId, filtros.patioUf],
   () => {
     filtrosAplicados.semSinistro = filtros.semSinistro;
     filtrosAplicados.apenasAtivos = filtros.apenasAtivos;
+    filtrosAplicados.apenasCandidatos = filtros.apenasCandidatos;
     filtrosAplicados.leiloeiroId = filtros.leiloeiroId;
     filtrosAplicados.patioUf = filtros.patioUf;
   },
@@ -397,6 +410,7 @@ function limparFiltro(chave: ChaveFiltro): void {
     case "kmMax": filtros.kmMax = FILTROS_PADRAO.kmMax; break;
     case "semSinistro": filtros.semSinistro = FILTROS_PADRAO.semSinistro; break;
     case "apenasAtivos": filtros.apenasAtivos = FILTROS_PADRAO.apenasAtivos; break;
+    case "apenasCandidatos": filtros.apenasCandidatos = FILTROS_PADRAO.apenasCandidatos; break;
     case "leiloeiroId": filtros.leiloeiroId = FILTROS_PADRAO.leiloeiroId; break;
     case "patioUf": filtros.patioUf = FILTROS_PADRAO.patioUf; break;
   }
@@ -426,6 +440,7 @@ async function carregarVeiculos() {
       ...veiculo,
       dataCaptura: new Date(veiculo.dataCaptura),
       dataLeilao: veiculo.dataLeilao ? new Date(veiculo.dataLeilao) : undefined,
+      candidatoAtualizadoEm: veiculo.candidatoAtualizadoEm ? new Date(veiculo.candidatoAtualizadoEm) : null,
       active: veiculo.dataLeilao ? calcularActive(new Date(veiculo.dataLeilao)) : false,
     }));
   } catch (error) {
@@ -458,12 +473,20 @@ function fecharModalEditar() {
 
 function atualizarVeiculoDaLista(veiculoAtualizado: Veiculo) {
   const index = veiculos.value.findIndex((v) => v.urlOrigem === veiculoAtualizado.urlOrigem);
+  const veiculoNormalizado: Veiculo = {
+    ...veiculoAtualizado,
+    dataCaptura: new Date(veiculoAtualizado.dataCaptura),
+    dataLeilao: veiculoAtualizado.dataLeilao ? new Date(veiculoAtualizado.dataLeilao) : undefined,
+    candidatoAtualizadoEm: veiculoAtualizado.candidatoAtualizadoEm ? new Date(veiculoAtualizado.candidatoAtualizadoEm) : null,
+    active: veiculoAtualizado.dataLeilao ? calcularActive(new Date(veiculoAtualizado.dataLeilao)) : false,
+  };
+
   if (index !== -1) {
-    veiculos.value[index] = { ...veiculos.value[index], ...veiculoAtualizado };
+    veiculos.value[index] = { ...veiculos.value[index], ...veiculoNormalizado };
   }
 
   if (veiculoSelecionado.value?.id === veiculoAtualizado.id) {
-    veiculoSelecionado.value = { ...veiculoSelecionado.value, ...veiculoAtualizado };
+    veiculoSelecionado.value = { ...veiculoSelecionado.value, ...veiculoNormalizado };
   }
 }
 
@@ -532,6 +555,42 @@ async function salvarVeiculo(veiculoEditado: Veiculo) {
     alert(`Erro ao salvar veículo: ${error}`);
   } finally {
     isLoading.value = false;
+  }
+}
+
+async function toggleCandidato(veiculo: Veiculo) {
+  const proximoEstado = !veiculo.isCandidato;
+
+  if (!proximoEstado) {
+    const confirmar = window.confirm('Remover este veículo da lista de candidatos?');
+    if (!confirmar) {
+      return;
+    }
+  }
+
+  try {
+    const response = await fetch(`/api/veiculos/${veiculo.id}/candidato`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        isCandidato: proximoEstado,
+        confirmar: !proximoEstado,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Erro ao atualizar candidato');
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.message || 'Erro ao atualizar candidato');
+    }
+
+    atualizarVeiculoDaLista(data.data);
+  } catch (error) {
+    console.error('Erro ao alternar candidato:', error);
+    alert('Não foi possível atualizar o status de candidato.');
   }
 }
 

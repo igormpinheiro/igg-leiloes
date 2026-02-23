@@ -40,4 +40,10 @@ export interface Veiculo {
   leiloeiroId: number;
   leiloeiro?: Leiloeiro;
   patioUf?: string;
+  isCandidato?: boolean;
+  candidatoOrdem?: number | null;
+  lanceLimite?: number | null;
+  candidatoStatus?: 'ok' | 'erro' | 'invalido' | null;
+  candidatoUltimoErro?: string | null;
+  candidatoAtualizadoEm?: Date | null;
 }

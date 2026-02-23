@@ -58,6 +58,15 @@
           <tr v-for="veiculo in veiculos" :key="veiculo.id" class="transition hover:bg-slate-50">
             <td class="sticky left-0 z-10 bg-white px-3 py-2 align-top">
               <div class="flex items-start gap-2">
+                <button
+                  type="button"
+                  class="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 transition hover:text-amber-500"
+                  :class="veiculo.isCandidato ? 'text-amber-500 border-amber-200 bg-amber-50' : ''"
+                  :title="veiculo.isCandidato ? 'Remover de candidatos' : 'Adicionar a candidatos'"
+                  @click.stop="emit('toggleCandidato', veiculo)"
+                >
+                  <Icon :name="veiculo.isCandidato ? 'mdi:star' : 'mdi:star-outline'" class="text-base" />
+                </button>
                 <span
                   class="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold text-white"
                   :class="getLeiloeiroClass(veiculo.leiloeiro)"
@@ -381,6 +390,7 @@ function getAriaSort(campo: CampoOrdenacao): 'ascending' | 'descending' | 'none'
 const emit = defineEmits<{
   ordenar: [campo: CampoOrdenacao];
   editar: [veiculo: Veiculo];
+  toggleCandidato: [veiculo: Veiculo];
 }>();
 
 function handleNomeVeiculoClick(event: MouseEvent, veiculo: Veiculo): void {

@@ -59,4 +59,10 @@ export const CONFIG_NEGOCIO = {
     },
     kmNaoInformada: 0.9,
   },
+
+  // Estratégia para candidatos a lance
+  candidatos: {
+    incrementoLancePadrao: 400,
+    percentualLanceLimiteInicial: 0.6,
+  },
 } as const;

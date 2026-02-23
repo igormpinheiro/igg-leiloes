@@ -14,6 +14,9 @@
             <li>
               <NuxtLink to="/scrapper" class="text-gray-600 hover:text-blue-600 transition">Scrapper</NuxtLink>
             </li>
+            <li>
+              <NuxtLink to="/candidatos" class="text-gray-600 hover:text-blue-600 transition">Candidatos</NuxtLink>
+            </li>
           </ul>
         </nav>
       </div>

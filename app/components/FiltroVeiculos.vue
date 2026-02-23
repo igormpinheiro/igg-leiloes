@@ -87,6 +87,10 @@
             <input v-model="filtros.apenasAtivos" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
             Apenas ativos
           </label>
+          <label class="flex items-center gap-2 text-sm text-slate-700">
+            <input v-model="filtros.apenasCandidatos" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+            Apenas candidatos
+          </label>
 
           <select
             v-model.number="filtros.leiloeiroId"
@@ -133,6 +137,7 @@ interface Filtros {
   kmMax: number | null;
   semSinistro: boolean;
   apenasAtivos: boolean;
+  apenasCandidatos: boolean;
   leiloeiroId: number | null;
   patioUf: string;
 }
