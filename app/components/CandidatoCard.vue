@@ -198,7 +198,7 @@ function montarBreakdown(lance: number) {
 }
 
 const breakdownLanceLimite = computed(() => {
-  const lance = props.veiculo.lanceLimite && props.veiculo.lanceLimite > 0 ? props.veiculo.lanceLimite : 0;
+  const lance = lanceLimiteInput.value > 0 ? lanceLimiteInput.value : 0;
   return montarBreakdown(lance);
 });
 
