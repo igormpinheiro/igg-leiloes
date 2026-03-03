@@ -245,11 +245,20 @@ const veiculoEditado = reactive<Veiculo>({
   leiloeiroId: 0,
 });
 
+function sincronizarVeiculoEditado(novoVeiculo: Veiculo) {
+  Object.assign(veiculoEditado, {
+    ...novoVeiculo,
+    dataCaptura: novoVeiculo.dataCaptura ? new Date(novoVeiculo.dataCaptura) : new Date(),
+    dataLeilao: novoVeiculo.dataLeilao ? new Date(novoVeiculo.dataLeilao) : undefined,
+    candidatoAtualizadoEm: novoVeiculo.candidatoAtualizadoEm ? new Date(novoVeiculo.candidatoAtualizadoEm) : null,
+  });
+}
+
 watch(() => props.veiculo, (novoVeiculo) => {
   if (novoVeiculo) {
-    Object.assign(veiculoEditado, JSON.parse(JSON.stringify(novoVeiculo)));
+    sincronizarVeiculoEditado(novoVeiculo);
   }
-}, { immediate: true });
+}, { immediate: true, deep: true });
 
 const ativoCalculado = computed(() => calcularActive(veiculoEditado.dataLeilao));
 const breakdown = computed(() => getBreakdown(veiculoEditado));
