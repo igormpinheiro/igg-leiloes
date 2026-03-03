@@ -22,11 +22,11 @@ export async function upsertVeiculo(
     };
 
     if (isMissingText(existing.modelo)) updateData.modelo = veiculo.modelo;
-    if (isMissingText(existing.descricao)) updateData.descricao = veiculo.descricao;
+    if (veiculo.descricao) updateData.descricao = veiculo.descricao;
     if (isMissingText(existing.marca)) updateData.marca = veiculo.marca;
     if (isMissingText(existing.ano)) updateData.ano = veiculo.ano;
     if (isMissingNumber(existing.quilometragem)) updateData.quilometragem = veiculo.quilometragem;
-    if (existing.sinistro === 'Nenhum' && veiculo.sinistro !== 'Nenhum') updateData.sinistro = veiculo.sinistro;
+    if (veiculo.sinistro !== 'Nenhum' || existing.sinistro === 'Nenhum') updateData.sinistro = veiculo.sinistro;
     if (isMissingNumber(existing.lanceInicial)) updateData.lanceInicial = veiculo.lanceInicial;
     if (isMissingNumber(existing.valorMercado)) updateData.valorMercado = veiculo.valorMercado;
     if (!existing.dataLeilao) updateData.dataLeilao = dataLeilaoDate;
