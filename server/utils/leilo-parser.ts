@@ -9,7 +9,7 @@ export class LeiloParser {
   static async parseLeiloBr(html: string, url: string): Promise<Veiculo | null> {
     try {
       const root = parse(html);
-      const jsonLdData = this.extrairDadosJsonLd(html);
+      const jsonLdData = this.extrairDadosJsonLd(html, url);
 
       const descricaoCompleta = jsonLdData?.nome || this.extrairTitulo(root);
       const descricaoLivre = this.extrairDescricaoLivre(root, jsonLdData?.descricao || '');
@@ -97,7 +97,7 @@ export class LeiloParser {
     return null;
   }
 
-  private static extrairDadosJsonLd(html: string): {
+  private static extrairDadosJsonLd(html: string, url?: string): {
     nome?: string;
     marca?: string;
     lanceInicial?: number;
@@ -114,9 +114,9 @@ export class LeiloParser {
         try {
           const startIndex = loteStateMatch.index! + loteStateMatch[0].length - 1;
           let bracketCount = 0;
-          let endIndex = startIndex;
+          let endIndex = -1;
 
-          for (let i = startIndex; i < Math.min(startIndex + 10000, html.length); i++) {
+          for (let i = startIndex; i < html.length; i++) {
             if (html[i] === '{') bracketCount++;
             else if (html[i] === '}') {
               bracketCount--;
@@ -127,49 +127,55 @@ export class LeiloParser {
             }
           }
 
-          const stateJson = html.substring(startIndex, endIndex);
-          const state = JSON.parse(stateJson);
-          const resultado: Record<string, any> = {};
+          if (endIndex === -1) {
+            const loteRef = url || '(URL desconhecida)';
+            console.warn(`[LeiloParser] LoteSelecionadoState truncado ou malformado — JSON não fechado. Lote: ${loteRef}`);
+          } else {
+            const stateJson = html.substring(startIndex, endIndex);
+            const state = JSON.parse(stateJson);
+            const resultado: Record<string, any> = {};
 
-          if (state.nome) {
-            resultado.nome = state.nome;
-            if (state.nome.includes('/')) {
-              resultado.marca = state.nome.split('/')[0].trim();
-            }
-          }
-
-          if (state.situacao) resultado.situacao = state.situacao;
-          if (state.descricao) resultado.descricao = state.descricao.trim();
-
-          if (state.veiculo) {
-            const veiculo = state.veiculo;
-            if (veiculo.km && veiculo.km > 0) resultado.quilometragem = veiculo.km;
-            if (veiculo.anoModelo && veiculo.anoFabricacao) {
-              resultado.ano = `${veiculo.anoFabricacao}/${veiculo.anoModelo}`;
-            } else if (veiculo.anoModelo) {
-              resultado.ano = veiculo.anoModelo.toString();
-            }
-            if (veiculo.valorMercado && veiculo.valorMercado > 0) {
-              resultado.valorMercado = veiculo.valorMercado;
-            }
-          }
-
-          if (state.valor) {
-            const valor = state.valor;
-            if (valor.minimo && valor.minimo > 0) {
-              resultado.lanceInicial = valor.minimo;
-              resultado.lanceAtual = valor.minimo;
-              if (valor.valorProposta && valor.valorProposta > 0) {
-                resultado.lanceAtual = valor.valorProposta;
-              } else if (valor.lance && valor.lance.valor && valor.lance.valor > 0) {
-                resultado.lanceAtual = valor.lance.valor;
+            if (state.nome) {
+              resultado.nome = state.nome;
+              if (state.nome.includes('/')) {
+                resultado.marca = state.nome.split('/')[0].trim();
               }
             }
-          }
 
-          if (Object.keys(resultado).length > 0) return resultado;
+            if (state.situacao) resultado.situacao = state.situacao;
+            if (state.descricao) resultado.descricao = state.descricao.trim();
+
+            if (state.veiculo) {
+              const veiculo = state.veiculo;
+              if (veiculo.km && veiculo.km > 0) resultado.quilometragem = veiculo.km;
+              if (veiculo.anoModelo && veiculo.anoFabricacao) {
+                resultado.ano = `${veiculo.anoFabricacao}/${veiculo.anoModelo}`;
+              } else if (veiculo.anoModelo) {
+                resultado.ano = veiculo.anoModelo.toString();
+              }
+              if (veiculo.valorMercado && veiculo.valorMercado > 0) {
+                resultado.valorMercado = veiculo.valorMercado;
+              }
+            }
+
+            if (state.valor) {
+              const valor = state.valor;
+              if (valor.minimo && valor.minimo > 0) {
+                resultado.lanceInicial = valor.minimo;
+                resultado.lanceAtual = valor.minimo;
+                if (valor.valorProposta && valor.valorProposta > 0) {
+                  resultado.lanceAtual = valor.valorProposta;
+                } else if (valor.lance && valor.lance.valor && valor.lance.valor > 0) {
+                  resultado.lanceAtual = valor.lance.valor;
+                }
+              }
+            }
+
+            if (Object.keys(resultado).length > 0) return resultado;
+          }
         } catch (e) {
-          console.error('Erro ao parsear LoteSelecionadoState:', e);
+          const loteRef = url || '(URL desconhecida)';
+          console.error(`[LeiloParser] Erro ao parsear LoteSelecionadoState. Lote: ${loteRef}`, e);
         }
       }
 
@@ -307,9 +313,9 @@ export class LeiloParser {
     try {
       const startIndex = stateMatch.index + stateMatch[0].length - 1;
       let bracketCount = 0;
-      let endIndex = startIndex;
+      let endIndex = -1;
 
-      for (let i = startIndex; i < Math.min(startIndex + 15000, html.length); i++) {
+      for (let i = startIndex; i < html.length; i++) {
         if (html[i] === '{') bracketCount++;
         else if (html[i] === '}') {
           bracketCount--;
@@ -319,6 +325,8 @@ export class LeiloParser {
           }
         }
       }
+
+      if (endIndex === -1) return null;
 
       const stateJson = html.substring(startIndex, endIndex);
       return JSON.parse(stateJson);
