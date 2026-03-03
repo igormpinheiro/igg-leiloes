@@ -16,7 +16,23 @@ function calcularActive(dataLeilao?: Date): boolean {
     day: '2-digit',
   }).format(data);
 
-  return formatarDia(dataLeilao) >= formatarDia(new Date());
+  const formatarDiaUTC = (data: Date) => {
+    const ano = data.getUTCFullYear();
+    const mes = String(data.getUTCMonth() + 1).padStart(2, '0');
+    const dia = String(data.getUTCDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const ehMeiaNoiteUTC = (data: Date) => data.getUTCHours() === 0
+    && data.getUTCMinutes() === 0
+    && data.getUTCSeconds() === 0
+    && data.getUTCMilliseconds() === 0;
+
+  const diaLeilao = ehMeiaNoiteUTC(dataLeilao)
+    ? formatarDiaUTC(dataLeilao)
+    : formatarDia(dataLeilao);
+
+  return diaLeilao >= formatarDia(new Date());
 }
 
 export const scrapperService = {

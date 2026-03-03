@@ -2,7 +2,7 @@ import { parse } from 'node-html-parser';
 import { getLeiloeiroPorUrl, getLeiloeiroPorDominio, isUrlSuportada } from './leiloeiro-registry';
 import { upsertVeiculo, deletarVeiculoPorUrl } from './veiculo-repository';
 import prisma from './prisma';
-import { normalizarDominio } from './veiculo-runtime';
+import { normalizarDataLeilao, normalizarDominio } from './veiculo-runtime';
 
 type ExtrairVeiculoInput = {
   url: string;
@@ -119,7 +119,7 @@ export async function extrairESalvarVeiculoPorUrl({
     },
   });
 
-  const dataLeilaoDate = dataLeilao ? new Date(dataLeilao) : new Date();
+  const dataLeilaoDate = normalizarDataLeilao(dataLeilao);
   veiculo.dataLeilao = dataLeilaoDate;
   veiculo.leiloeiroId = leiloeiro.id;
 
