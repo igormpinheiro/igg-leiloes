@@ -41,7 +41,7 @@ export const scrapperService = {
    */
   async executarScrapper(url: string, dataLeilao?: string): Promise<ExtractResult> {
     if (!this.isUrlSupported(url)) {
-      throw new Error('URL não suportada. Atualmente suportamos apenas os sites Parque dos Leilões e Leilo.');
+      throw new Error('URL não suportada. Atualmente suportamos apenas os sites Parque dos Leilões, Leilo e Copart.');
     }
 
     const body: Record<string, string> = { url };
@@ -112,6 +112,7 @@ export const scrapperService = {
     const supportedDomains = [
       'parquedosleiloes.com.br',
       'leilo.com.br',
+      'copart.com.br',
     ];
 
     return supportedDomains.some((domain) => url.includes(domain));

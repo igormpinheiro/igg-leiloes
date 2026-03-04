@@ -1,6 +1,7 @@
 import type { Veiculo } from '~/types/veiculo';
 import { LeilaoParser } from './scrapper-parser';
 import { LeiloParser } from './leilo-parser';
+import { CopartParser } from './copart-parser';
 import { normalizarDominio } from './veiculo-runtime';
 
 export interface LeiloeiroConfig {
@@ -31,6 +32,15 @@ const LEILOEIROS: LeiloeiroConfig[] = [
     taxaDespachantePadrao: 0,
     taxaVistoriaPadrao: 0,
     parser: (html, url) => LeiloParser.parseLeiloBr(html, url),
+  },
+  {
+    descricao: 'Copart',
+    dominio: 'copart.com.br',
+    comissaoPadrao: 5,
+    taxaAdmPadrao: 1700,
+    taxaDespachantePadrao: 0,
+    taxaVistoriaPadrao: 0,
+    parser: (html, url) => CopartParser.parseCopart(html, url),
   },
 ];
 
