@@ -525,6 +525,10 @@ async function atualizarVeiculoDoModal() {
 async function salvarVeiculo(veiculoEditado: Veiculo) {
   try {
     isLoading.value = true;
+    if (!veiculoEditado.id) {
+      throw new Error('ID do veículo inválido para atualização');
+    }
+
     const response = await fetch(`/api/veiculos/${veiculoEditado.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -540,14 +544,7 @@ async function salvarVeiculo(veiculoEditado: Veiculo) {
       throw new Error(data.message || 'Erro ao atualizar veículo');
     }
 
-    const index = veiculos.value.findIndex((v) => v.id === veiculoEditado.id);
-    if (index !== -1) {
-      veiculos.value[index] = {
-        ...veiculoEditado,
-        dataLeilao: veiculoEditado.dataLeilao ? new Date(veiculoEditado.dataLeilao) : undefined,
-        active: veiculoEditado.dataLeilao ? calcularActive(new Date(veiculoEditado.dataLeilao)) : false,
-      };
-    }
+    atualizarVeiculoDaLista(data.data);
 
     alert('Veículo atualizado com sucesso!');
   } catch (error) {

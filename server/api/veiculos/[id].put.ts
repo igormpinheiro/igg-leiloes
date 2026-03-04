@@ -26,9 +26,9 @@ const SINISTROS_VALIDOS = new Set([
 
 export default defineEventHandler(async (event) => {
   try {
-    const id = event.context.params?.id;
+    const id = getRouterParam(event, 'id');
 
-    if (!id) {
+    if (!id || id === 'undefined' || id === 'null') {
       throw createError({
         statusCode: 400,
         statusMessage: 'ID do veículo não fornecido',
@@ -51,8 +51,37 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const veiculoAtualizado = await prisma.veiculo.update({
+    if (Object.keys(updateData).length === 0) {
+      throw createError({
+        statusCode: 400,
+        statusMessage: 'Nenhum campo válido para atualização foi informado',
+      });
+    }
+
+    const veiculoPorId = await prisma.veiculo.findUnique({
       where: { id },
+      select: { id: true },
+    });
+
+    let idAlvo = veiculoPorId?.id;
+
+    if (!idAlvo && typeof body.urlOrigem === 'string' && body.urlOrigem.trim()) {
+      const veiculoPorUrl = await prisma.veiculo.findUnique({
+        where: { urlOrigem: body.urlOrigem.trim() },
+        select: { id: true },
+      });
+      idAlvo = veiculoPorUrl?.id;
+    }
+
+    if (!idAlvo) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Veículo não encontrado para atualização',
+      });
+    }
+
+    const veiculoAtualizado = await prisma.veiculo.update({
+      where: { id: idAlvo },
       data: updateData,
       include: {
         leiloeiro: true,
@@ -69,6 +98,13 @@ export default defineEventHandler(async (event) => {
 
     if (error?.statusCode && error?.statusMessage) {
       throw error;
+    }
+
+    if (error?.code === 'P2025') {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Veículo não encontrado para atualização',
+      });
     }
 
     throw createError({
